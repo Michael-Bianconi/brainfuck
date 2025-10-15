@@ -1,14 +1,16 @@
 import sys
 class Interpreter:
 
-    def __init__(self, source, memsize=30000):
-        self.source = source
+    def __init__(self, memsize=30000):
+        self.source = ""
         self.memory = [0 for _ in range(memsize)]
         self.dptr = 0
         self.iptr = 0
-    def run(self):
+
+    def run(self, source):
         self.dptr = 0
         self.iptr = 0
+        self.source = source
         while self.iptr < len(self.source):
             op = self.source[self.iptr]
             if op == '[':
@@ -18,9 +20,9 @@ class Interpreter:
                 if self.memory[self.dptr] != 0:
                     self._jump()
             elif op == '+':
-                self.memory[self.dptr] = (self.memory[self.dptr] + 1) % 255
+                self.memory[self.dptr] = (self.memory[self.dptr] + 1) % 256
             elif op == '-':
-                self.memory[self.dptr] = (self.memory[self.dptr] - 1) % 255
+                self.memory[self.dptr] = (self.memory[self.dptr] - 1) % 256
             elif op == '>':
                 self.dptr += 1
             elif op == '<':

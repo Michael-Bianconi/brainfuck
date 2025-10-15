@@ -45,9 +45,9 @@ class State:
     def __init__(self, stackaddr=255):
         self.nextdatacell = 0
         self.stackpointer = stackaddr
-        self.currentblock = None
+        self.currentfunction = None
         self.data = {}
-        self.blocks = {}
+        self.functions = {}
         self.opmap = {
 
             # Internal Instructions
@@ -61,8 +61,8 @@ class State:
             '_JBN': InternalInstruction('_JBN', None, None, self.jbn),  # Jump backward if current cell is nonzero
 
             # Assembler Instructions
-            'BLOC': PseudoInstruction('.BLOCK', VARNAME, None, None),  # Define a code block as a variable
-            'EBLC': PseudoInstruction('.ENDBLOCK', IMMEDIATE, None, None),  # Ends code block
+            '.FUNCTION': PseudoInstruction('.FUNCTION', VARNAME, None, self.asm_function),  # Define a code block as a variable
+            '.RETURN': PseudoInstruction('.RETURN', None, None, self.asm_return),  # Ends code block
 
             # Heap/Stack
             'ALOC': PseudoInstruction('ALOC', VARNAME, IMMEDIATE, self.aloc),  # Allocate chunk of heap for variable
@@ -77,19 +77,25 @@ class State:
             'SETI': PseudoInstruction('SETI', ADDRESS, IMMEDIATE, self.seti),  # Set variable to immediate
             'COPY': PseudoInstruction('COPY', ADDRESS, ADDRESS, self.copy),  # Set variable to other variable
             'SUBI': PseudoInstruction('SUBI', ADDRESS, IMMEDIATE, self.subi),  # Decrement variable by immediate
-            'SUBR': PseudoInstruction('SUBR', ADDRESS, ADDRESS, self.subr),  # Decrement variable by another variable
+            'SUBA': PseudoInstruction('SUBA', ADDRESS, ADDRESS, self.suba),  # Decrement variable by another variable
             'MULT': PseudoInstruction('MULT', ADDRESS, IMMEDIATE, self.mult),  # Multiply cell by x
 
+            # Bitwise Arithmetic
+            'LSHI': PseudoInstruction('LSHI', ADDRESS, IMMEDIATE, self.lshi),  # Left-shift n by immediate value
+
             # Boolean logic
-            'LNOT': PseudoInstruction('LNOT', ADDRESS, None, self.lnot),  # Logical not, sets n 1 if zero and 0 otherwise
+            'LNOT': PseudoInstruction('LNOT', ADDRESS, ADDRESS, self.lnot),  # Logical not, sets n 1 if zero and 0 otherwise
 
             # Logic Flow
+            'CALL': PseudoInstruction('CALL', VARNAME, None, self.call),  # Call the specified function, unconditionally
             'JINZ': PseudoInstruction('JINZ', ADDRESS, VARNAME, self.jinz),  # Executes the code block if n is nonzero
             'JIEZ': PseudoInstruction('JIEZ', ADDRESS, VARNAME, self.jiez),  # Executes the code block if n is zero
 
             # I/O
             'OUTC': PseudoInstruction('OUTI', ADDRESS, IMMEDIATE, self.outc)  # Prints bytes at address to stdout
         }
+
+        self.aloc('$c', 1)  # Carry flag
 
     def getaddress(self, varname):
         if varname not in self.data:
@@ -106,6 +112,17 @@ class State:
                 continue
             tokens = line.split()
             mnemonic = tokens[0].upper()
+
+            if self.currentfunction is not None:
+                if mnemonic == '.FUNCTION':
+                    raise Exception("Cannot defined a function from within another function")
+                elif mnemonic == '.RETURN':
+                    self.asm_return()
+                    continue
+                else:
+                    self.functions[self.currentfunction] += line + '\n'
+                    continue
+
             op1 = tokens[1] if len(tokens) > 1 else None
             op2 = tokens[2] if len(tokens) > 2 else None
             instruction = self.opmap[mnemonic]
@@ -135,16 +152,22 @@ class State:
         if x >= 0:
             return '>' * x
         else:
-            return '<' * abs(x)
+            return '<' * -x
 
     def res(self):
         return '[-]'
 
     def add(self, x):
-        return '+' * x if x >= 0 else self.sub(-x)
+        if x < 0:
+            return self.sub(-x)
+        else:
+            return '+' * x
 
     def sub(self, x):
-        return '-' * x if x >= 0 else self.add(-x)
+        if x < 0:
+            return self.add(-x)
+        else:
+            return '-' * x
 
     def lin(self, x):
         return ',>' * x
@@ -190,6 +213,7 @@ class State:
     def aloc(self, varname, n):
         self.data[varname] = self.nextdatacell
         self.nextdatacell += n
+        return ''
 
     def push(self, n):
         """
@@ -263,9 +287,23 @@ class State:
             _MOV {-n}
         """)
 
-    def subr(self, n, m):
-        # TODO
-        pass
+    def suba(self, n, m):
+        if n == m:
+            return self.assemble(f"SETI {n} 0")
+        else:
+            return self.assemble(f"""
+                PUSH {m}        # Push m onto the stack
+                _MOV {m}        # Move data pointer to m
+                _JFZ            # While m is not zero
+                    _MOV {n-m}  #   Move data pointer to n
+                    _SUB 1      #   Subtract 1 from n
+                    _MOV {m-n}  #   Move data pointer to m
+                    _SUB 1      #   Subtract 1 from m
+                _JBN            # Repeat until m is 0
+                _MOV {-m}       # Fix data pointer back to 0
+                POPS {m}        # Fix m back to value popped from stack
+            """)
+
 
     def seti(self, n, x):
         return self.assemble(f"""
@@ -306,67 +344,57 @@ class State:
             _MOV {-(n + m)}
         """)
 
-    def block(self, varname):
-        if varname in self.blocks:
-            raise f"${varname} is already defined"
-        self.currentblock = varname
-        self.blocks[varname] = ""
-
-    def endblock(self):
-        self.currentblock = None
-
     def jinz(self, n, v):
         return self.assemble(f"""
-            PUSH {n}
-            _MOV {n}
-            _JFZ
-                _MOV {-n}
-                {self.assemble(self.blocks[v])}
-                _MOV {n}
-                _RES
-            _JBN
-            _MOV {-n}
-            POPS {n}
+            PUSH {n}        # Push n onto the stack    
+            _MOV {n}        # Move data pointer to n 
+            _JFZ            # If n is nonzero
+                _MOV {-n}   #   Fix data pointer back to zero
+                CALL {v}    #   Call the function
+                _MOV {n}    #   Move data pointer to n
+                _RES        #   Set n to zero
+            _JBN            # End if
+            _MOV {-n}       # Fix data pointer back to zero
+            POPS {n}        # Pop n back off the stack
         """)
 
     def jiez(self, n, v):
         return self.assemble(f"""
-            PUSH {n}                                    # Push $n onto the stack
-            LNOT {n}                                    # Sets $n to 1 if $n == 0 and 0 otherwise
-            _MOV {n}                                    # Move data pointer to n
-            _JNZ                                        # If $n is zero
-                _MOV {-n}                               #   Fix data pointer back to zero
-                POPS {n}                                #   Pop $n off the stack and back into $n
-                {self.assemble(self.blocks[v])}         #   Inline the linked block
-                PUSH {n}                                #   Push $n back onto the stack
-                _MOV {n}                                #   Move data pointer back to $n
-                _RES                                    #   Set $n to zero
-            _JBN                                        # End if
-            _MOV {-n}                                   # Fix data pointer back to zero
-            POPS {n}                                    # Pop $n off the stack and back into $n
+            PUSH {n}            # Push $n onto the stack
+            LNOT {n} {n}        # Sets $n to 1 if $n == 0 and 0 otherwise
+            _MOV {n}            # Move data pointer to n
+            _JFZ                # If $n is zero
+                _MOV {-n}       #   Fix data pointer back to zero
+                POPS {n}        #   Pop $n off the stack and back into $n
+                CALL {v}        #   Call the function
+                PUSH {n}        #   Push $n back onto the stack
+                _MOV {n}        #   Move data pointer back to $n
+                _RES            #   Set $n to zero
+            _JBN                # End if
+            _MOV {-n}           # Fix data pointer back to zero
+            POPS {n}            # Pop $n off the stack and back into $n
         """)
 
-    def lnot(self, n):
-        temp0 = self.data['temp0']
+    def lnot(self, n, m):
+        sptr = self.stackpointer
         return self.assemble(f"""
-            _MOV {temp0}                    # Move data pointer to temp0
-            _RES                            # Set temp0 to 0
-            _MOV {n - temp0}                # Move data pointer to n
-            _JFZ                            # If $n is not zero
-                _MOV {temp0 - n}            #   Move data pointer to temp0
-                _ADD 1                      #   Set temp0 to 1
-                _MOV {n - temp0}            #   Move data pointer to n
-                _RES                        #   Set n to 0
-            _JBN                            # End if
-            _ADD 1                          
-            _MOV {temp0 - n}
-            _JFZ
-                _MOV {n - temp0}
-                _SUB 1
-                _MOV {temp0 - n}
-                _SUB 1
-            _JBN
-            _MOV {-temp0}
+            PUSH {m}            # Push m into the stack
+            _MOV {n}            # Move to n
+            _RES                # Set n to 0
+            _ADD 1              # Set n to 1
+            _MOV {sptr-n}       # Move to top of stack
+            _JFZ                # If top of stack is nonzero
+                _MOV {n-sptr}   #   Move to n
+                _SUB 1          #   Subtract 1 from n
+                _MOV {sptr-n}   #   Move to top of stack
+                _RES            #   Set top of stack to 0
+            _JBN                # End if
+            _MOV {-sptr}        # Fix data pointer back to 0
+            POPN                # Fix stack
+        """)
+
+    def bnot(self, n, m):
+        return self.assemble(f"""
         """)
 
     def mult(self, n, x):
@@ -383,3 +411,21 @@ class State:
             _MOV {-sptr}        # Fix data pointer back to 0
             POPN                # Fix stack pointer back down
         """)
+
+    def lshi(self, n, x):
+        if x == 0:
+            return ''
+        return self.mult(n, 2*x)
+
+    def asm_function(self, v):
+        self.functions[v] = ''
+        self.currentfunction = v
+        return ''
+
+    def asm_return(self):
+        self.currentfunction = None
+        return ''
+
+    def call(self, v):
+        return self.assemble(self.functions[v])
+

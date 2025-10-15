@@ -44,6 +44,22 @@ class TestInterpreter(TestCase):
         output = self.capturestdout(interpreter)
         self.assertEqual("Hello, World!\n\n", output)
 
+    def test_add32(self):
+        interpreter = Interpreter("""
+        +
+        [<+>>>>>+<<<<-]<[>+<-]+>>>>>[<<<<<->>>>>[-]]<<<<<[-
+         >>+
+         [<<+>>>>>+<<<-]<<[>>+<<-]+>>>>>[<<<<<->>>>>[-]]<<<<<[-
+          >>>+
+          [<<<+>>>>>+<<-]<<<[>>>+<<<-]+>>>>>[<<<<<->>>>>[-]]<<<<<[-
+           >>>>+<<<<
+          ]
+         ]
+        ]>
+        """ * 256)
+        interpreter.run()
+        self.assertListEqual([0, 0, 0, 1], interpreter.memory[:4])
+
     @unittest.mock.patch('sys.stdout', new_callable=io.StringIO)
     def capturestdout(self, interpreter, mock_stdout):
         interpreter.run()

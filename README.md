@@ -71,11 +71,11 @@ instructions, the follow guidelines should be followed:
 1. The data pointer must be at position 0 when a pseudo-instruction is called. This means
 if `_MOV n` is used, there must be a corresponding `_MOV -n` to reset its position.
 2. Temporary registers must equal 0 before a pseudo-instruction is used.
+3. If the value at the top of the stack is used as a temporary variable that is reduced to 0,
+`popn` should be used to fix the stack pointer.
 
 ### _MOV x
-Moves the data pointer x cells.
-
-**Implementation:** `>` times x if x > 0, or `<` if x < 0
+Moves the data pointer x cells. If x is positive, moves right. If x is negative, moves left.
 
 **Note:** When the operand for this operation is represented as (m-n), that
 should be read as moving from $n to $m.
@@ -83,12 +83,10 @@ should be read as moving from $n to $m.
 ### _RES
 The memory cell pointed at by the data pointer $d is set to 0.
 
-**Implementation:** `[-]`
-
 ### _ADD x
-The memory cell at the data pointer $d is incremented by x.
-
-**Implementation:** `+` times x (potentially optimized)
+The memory cell at the data pointer $d is incremented by x. If this
+results in the memory cell overflowing, sets carry flag $c to 1.
+Otherwise, carry flag $c is set to 0.
 
 ### _SUB x
 The memory cell at the data pointer $d is decremented by x.
@@ -132,86 +130,36 @@ Does not modify temporary registers.
 ### SETR $n $m
 Sets $n to the value in $m. Modifies temporary registers.
 
-### ADD $n x
+### ADDI $n x
 Adds to the specified register the value of x.
-Overflow behavior depends on the interpreter.
-Does not modify temporary registers.
 
-### ADD $n $m
-Adds to register n the value of register $m. Modifies temporary registers.
+### ADDA $n $m
+Adds to register n the value of register $m.
 
-### SUB $n x
-Subtracts from the specified register the value of x. Underflow behavior depends on the interpreter.
+### SUBI $n x
+Subtracts from the specified register the value of x.
 
-### SUB $n $x
+### SUBA $n $m
+Subtracts from $n the value at address $m.
 
-### MUL $n $x
+### MULT $n x
+Multiplies $n by immediate value x.
 
 ## Boolean Logic
 
-### EQL $n x
-Sets $n to 1 if $n is equal to x. Otherwise sets $n to 0.
-
-**Implementation:**
-```
-_MOV n
-_SUB (x-1)
-
-
-
-```
-
-5-10 = 250
-10-10 = 0
-
-
-### EQL $n $m
-Sets $n to 1 if $n is equal to $m. Otherwise sets $n to 0.
-
-**Implementation:**
-```
-_MOV n
-_NEZ
-  _MOV (t1-n)
-  _ADD 1
-  _MOV (n-t1)
-  _SUB 1
-_END
-_ADD 1
-_MOV (m-t1)
-_NEZ
-  _MOV (t1-m)
-  _SUB 1
-  _MOV (t0-t1)
-  _ADD 1
-  _MOV (m-t0)
-  _SUB 1
-_END
-_MOV (t0-m)
-_NEZ
-  _MOV (m-t0)
-  _ADD 1
-  _MOV (t0-m)
-  _SUB 1
-_END
-_MOV (t1-t0)
-_NEZ
-  _MOV (n-t1)
-  _SUB 1
-  _MOV (t1-n)
-  _RES
-_END
-```
-
-### NEQ $n $m
-
+### LNOT $n $m
+Logical not. Sets $n to 0 if $m is non-zero. Set $n to 1 if $m is zero.
+$n and $m may be the same address.
 
 ## Logic Flow
 
-### FUNC name ... RET
+### .function name ... .return
 
 Creates function name(), which encloses several instructions. When
 the function is referenced, the enclosed instructions are copied in.
+1. Each function must have exactly one return
+2. A function may not be defined within another function
+3. The stack and stack pointer must be identical entering the function as leaving it
 
 **Implementation:** N/A
 
