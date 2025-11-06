@@ -258,22 +258,51 @@ class Assembler:
                 '[<+>->]<<'         # [1<, 0, 0]        |
             ])
 
+    def logical_and(self, bitwidth=8):
+        """
+        Pops the top two values off the stack. If both are non-zero, pushes 1 onto the stack. Otherwise, pushes 0.
+        :param bitwidth:
+        :return:
+        """
+        if bitwidth == 8:
+            self.stack_pointer -= 1
+            return ''.join([                    # [0, 0 | 0]        [n, 0 | 0]      [0, y | 0]      [x, y | 0]
+                '<<[>>+<<[-]]'                  # [| 0, 0, 0]       [| 0, 0, 1]     [| 0, y, 0]     [| 0, y, 1]
+                '>[>+<[-]]>',                   # [0, 0 | 0]        [0, 0 | 1]      [0, 0 | 1]      [0, 0 | 2]
+                '[-[<<+>>[-]]]<'                 # [0 | 0, 0]        [0 | 0, 0]      [0 | 0, 0]      [1 | 0, 0]
+            ])
+
     def equals(self, bitwidth=8):
         """
         Pops the top two values off the stack. If they are the same, pushes 1 onto the stack.
         If they are not the same, pushes 0 onto the stack.
         :return:
         """
-        if bitwidth == 8:
-            return ''.join([            # [x, y, 0]
-                self.minus(bitwidth=bitwidth),           # If equal, [0]. If not equal, [z]
-                self.load(1, bitwidth=8),             # If equal, [0, 1]. If not equal, [z, 1]
-                self.left(1, bitwidth=bitwidth),
-                '[[-]>-<]',            # If equal, [0, 1]. If not equal, [0, 0]
-                '>[<+>-]'               # If equal, [1, 0]. If not equal, [0, 0]
+        if bitwidth == 8:                           # [x, y] d=y
+            return ''.join([                        # If x == y      | If x != y
+                self.minus(bitwidth=bitwidth),      # [0, 0]         | [z, 0]     d=y
+                '+<',                               # [0, 1]         | [z, 1]     d=x
+                '[[-]>-<]>',                        # [0, 1]         | [0, 0]     d=y
+                '[<+>-]'                            # [1, 0]         | [0, 0]     d=y
             ])
-        elif bitwidth == 16:
-            pass
+        elif bitwidth == 16:                        # [x1, x2, 0, 0, y1, y2, 0, 0 | 0, 0, 0, 0]
+            x1 = self.stack_pointer - 8
+            x2 = self.stack_pointer - 7
+            y1 = self.stack_pointer - 4
+            y2 = self.stack_pointer - 3
+            source = ''.join([
+                self.push(x1, bitwidth=8),          # [x1, x2, 0, 0, y1, y2, 0, 0, x1 | 0, 0, 0]
+                self.push(y1, bitwidth=8),          # [x1, x2, 0, 0, y1, y2, 0, 0, x1, y1 | 0, 0]
+                self.equals(bitwidth=8),            # [x1, x2, 0, 0, y1, y2, 0, 0, x1==y1 | 0, 0, 0]
+                self.push(x2, bitwidth=8),          # [x1, x2, 0, 0, y1, y2, 0, 0, x1==y1, x2 | 0, 0]
+                self.push(y2, bitwidth=8),          # [x1, x2, 0, 0, y1, y2, 0, 0, x1==y1, x2, y2 | 0]
+                self.equals(bitwidth=8),            # [x1, x2, 0, 0, y1, y2, 0, 0, x1==y1, x2==y2 | 0, 0]
+                self.logical_and(bitwidth=8),       # [x1, x2, 0, 0, y1, y2, 0, 0, x==y | 0, 0, 0]
+                '<<<<[-]<[-]<<<[-]<[-]>>>>>>>>',    # [0, 0, 0, 0, 0, 0, 0, 0 | x==y, 0, 0, 0]
+                '[<<<<<<<<+>>>>>>>>-]<<<<<<<',      # [x==y | 0]
+            ])
+            self.stack_pointer -= 8
+            return source
 
 
     def logical_not(self):

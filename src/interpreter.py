@@ -6,12 +6,10 @@ class Interpreter:
         self.memory = [0 for _ in range(memsize)]
         self.dptr = 0
         self.iptr = 0
+        self.cycles = 0
 
     def run(self, source):
-        self.dptr = 0
-        self.iptr = 0
         self.source = source
-        self.cycles = 0
         while self.iptr < len(self.source):
             op = self.source[self.iptr]
             if op == '[':

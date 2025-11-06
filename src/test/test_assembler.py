@@ -104,48 +104,74 @@ class TestAssembler(TestCase):
 
     def test_logical_not(self):
 
-        cases = [[5, 0],
-                 [255, 0],
-                 [1, 0],
-                 [0, 1],
-        ]
+        cases = [0, 1, 2, 5, 255]
 
         for case in cases:
-            subassembler = Assembler()
-            source = ''.join([
-                subassembler.load(case[0]),
-                subassembler.logical_not()
-            ])
-            self.interpreter.run(source)
-            self.assertEqual(self.interpreter.memory[0], case[1], msg=case)
-            self.assertEqual(self.interpreter.memory[1], 0, msg=case)
-            self.assertEqual(subassembler.stack_pointer, 1, msg=case)
+            with self.subTest(values=case):
+                self.setUp()
+                source = ''.join([
+                    self.assembler.load(case),
+                    self.assembler.logical_not()
+                ])
+                self.interpreter.run(source)
+                self.assertEqual(0 if case > 0 else 1, self.interpreter.memory[0], msg=self.interpreter.memory[:4])
+                self.assertEqual(0, self.interpreter.memory[1])
+                self.assertEqual(self.assembler.stack_pointer, 1)
 
-    def test_equals(self):
-
-        cases = [[5, 5, True],
-                 [0, 5, False],
-                 [5, 0, False],
-                 [0, 0, True],
-                 [5, 4, False],
-                 [255, 4, False],
-                 [5, 255, False],
-                 [0, 255, False],
-                 [255, 0, False],
-                 [255, 255, True],
-        ]
+    def test_logical_and(self):
+        cases = [[0, 0], [1, 0], [5, 0], [255, 0], [1, 1], [5, 5], [255, 255]]
+        cases.extend([x[::-1] for x in cases])
 
         for case in cases:
-            subassembler = Assembler()
-            source = ''.join([
-                subassembler.load(case[0]),
-                subassembler.load(case[1]),
-                subassembler.equals()
-            ])
-            self.interpreter.run(source)
-            self.assertEqual(self.interpreter.memory[0], 1 if case[2] else 0, msg=case)
-            self.assertEqual(self.interpreter.memory[1], 0, msg=case)
-            self.assertEqual(subassembler.stack_pointer, 1, msg=case)
+            with self.subTest(values=case):
+                self.setUp()
+                source = ''.join([
+                    self.assembler.load(case[0], bitwidth=8),
+                    self.assembler.load(case[1], bitwidth=8),
+                    self.assembler.logical_and(bitwidth=8)
+                ])
+                self.interpreter.run(source)
+                self.assertEqual((case[0] > 0 and case[1] > 0), self.interpreter.memory[0], msg=self.interpreter.memory[0:12])
+                self.assertEqual(self.interpreter.memory[1], 0)
+                self.assertEqual(self.assembler.stack_pointer, 1)
+
+    def test_equals_8bit(self):
+
+        cases = [[5, 5], [0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255]]
+        cases.extend([x[::-1] for x in cases])
+
+        for case in cases:
+            with self.subTest(values=case):
+                self.setUp()
+                source = ''.join([
+                    self.assembler.load(case[0]),
+                    self.assembler.load(case[1]),
+                    self.assembler.equals()
+                ])
+                self.interpreter.run(source)
+                self.assertEqual(self.interpreter.memory[0], 1 if case[0] == case[1] else 0, msg=self.interpreter.memory[0:12])
+                self.assertEqual(self.interpreter.memory[1], 0)
+                self.assertEqual(self.assembler.stack_pointer, 1)
+
+    def test_equals_16bit(self):
+
+        cases = [[5, 5], [0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255],
+                 [0, 256], [0, 3000], [0, 65535], [256, 256, 65535]]
+        cases.extend([x[::-1] for x in cases])
+
+        for case in cases:
+            with self.subTest(values=case):
+                self.setUp()
+                source = ''.join([
+                    self.assembler.load(case[0], bitwidth=16),
+                    self.assembler.load(case[1], bitwidth=16),
+                    self.assembler.equals(bitwidth=16)
+                ])
+                self.interpreter.run(source)
+                self.assertEqual(self.interpreter.memory[0], 1 if case[0] == case[1] else 0,
+                                 msg=self.interpreter.memory[0:12])
+                self.assertEqual(self.interpreter.memory[1], 0)
+                self.assertEqual(self.assembler.stack_pointer, 1)
 
     def test_push_8bit(self):
         cases = [(0, 0, 0), (1, 0, 0), (5, 5, 5), (255, 0, 0), (0, 0, 255), (255, 255, 255)]
