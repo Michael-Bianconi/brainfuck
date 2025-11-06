@@ -11,6 +11,7 @@ class Interpreter:
         self.dptr = 0
         self.iptr = 0
         self.source = source
+        self.cycles = 0
         while self.iptr < len(self.source):
             op = self.source[self.iptr]
             if op == '[':
@@ -32,6 +33,7 @@ class Interpreter:
             elif op == ',':
                 self.memory[self.dptr] = ord(sys.stdin.read(1))
             self.iptr += 1
+            self.cycles += 1
         print('\n')
 
     def _jump(self):

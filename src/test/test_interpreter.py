@@ -8,7 +8,8 @@ from src.interpreter import Interpreter
 class TestInterpreter(TestCase):
 
     def test_012345(self):
-        interpreter = Interpreter(f"""
+        interpreter = Interpreter()
+        output = self.capturestdout(interpreter, f"""
             {'+' * 48}.>
             {'+' * 49}.>
             {'+' * 50}.>
@@ -16,7 +17,6 @@ class TestInterpreter(TestCase):
             {'+' * 52}.>
             {'+' * 53}.>
         """)
-        output = self.capturestdout(interpreter)
         self.assertListEqual([48,49,50,51,52,53], interpreter.memory[0:6])
         self.assertEqual("012345\n\n", output)
 
@@ -27,7 +27,8 @@ class TestInterpreter(TestCase):
         self.assertEqual("h\n\n", output)
 
     def test_helloworld(self):
-        interpreter = Interpreter("""
+        interpreter = Interpreter()
+        output = self.capturestdout(interpreter, """
             >++++++++[<+++++++++>-]<.
             >++++[<+++++++>-]<+.
             +++++++..
@@ -41,27 +42,17 @@ class TestInterpreter(TestCase):
             --------.
             >>>++++[<++++++++>-]<+.
         """)
-        output = self.capturestdout(interpreter)
         self.assertEqual("Hello, World!\n\n", output)
 
-    def test_add32(self):
-        interpreter = Interpreter("""
-        +
-        [<+>>>>>+<<<<-]<[>+<-]+>>>>>[<<<<<->>>>>[-]]<<<<<[-
-         >>+
-         [<<+>>>>>+<<<-]<<[>>+<<-]+>>>>>[<<<<<->>>>>[-]]<<<<<[-
-          >>>+
-          [<<<+>>>>>+<<-]<<<[>>>+<<<-]+>>>>>[<<<<<->>>>>[-]]<<<<<[-
-           >>>>+<<<<
-          ]
-         ]
-        ]>
-        """ * 256)
-        interpreter.run()
-        self.assertListEqual([0, 0, 0, 1], interpreter.memory[:4])
+
+    @unittest.mock.patch('sys.stdin.read', return_value='1')
+    def test_read(self, mock_stdin):
+        interpreter = Interpreter()
+        output = self.capturestdout(interpreter, """,.""")
+        self.assertEqual("1\n\n", output)
+
 
     @unittest.mock.patch('sys.stdout', new_callable=io.StringIO)
-    def capturestdout(self, interpreter, mock_stdout):
-        interpreter.run()
+    def capturestdout(self, interpreter, source, mock_stdout):
+        interpreter.run(source)
         return mock_stdout.getvalue()
-

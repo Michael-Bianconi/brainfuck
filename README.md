@@ -69,12 +69,12 @@ directly modify the underlying structures in memory. Several pseudo-instructions
 on those underlying structures remaining in a very precise state. If using internal
 instructions, the follow guidelines should be followed:
 1. The data pointer must be at position 0 when a pseudo-instruction is called. This means
-if `_MOV n` is used, there must be a corresponding `_MOV -n` to reset its position.
+if `MOVE n` is used, there must be a corresponding `MOVE -n` to reset its position.
 2. Temporary registers must equal 0 before a pseudo-instruction is used.
 3. If the value at the top of the stack is used as a temporary variable that is reduced to 0,
 `popn` should be used to fix the stack pointer.
 
-### _MOV x
+### MOVE x
 Moves the data pointer x cells. If x is positive, moves right. If x is negative, moves left.
 
 **Note:** When the operand for this operation is represented as (m-n), that
@@ -176,13 +176,13 @@ Executes the specified function if $n is non-zero.
 
 **Implementation:**
 ```
-_MOV n
+MOVE n
 _NEZ
-  _MOV -n
+  MOVE -n
   func()
-  _MOV $0
+  MOVE $0
 _END
-_MOV -$0
+MOVE -$0
 ```
 
 ## I/O
