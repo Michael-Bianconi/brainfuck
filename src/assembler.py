@@ -185,31 +185,55 @@ class Assembler:
             self.stack_pointer -= 4
             return '<<<[-]<[-]'
 
-    def plus(self, bitwidth=8):
+    def plus(self, a_bits, b_bits, out_bits):
         """
-        Pops the top two values off the stack. Adds them together.
-        Pushes the result to the stack.
+        Input:  [... a b | 0]
+        Output: [... a+b | 0 0]
+
+        Pops b off the stack. Pops a off the stack. Pushes the sum of a+b to the stack.
+
+        :param a_bits: 8|16 The size of the a value.
+        :param b_bits: 8|16 The size of the b value.
+        :param out_bits: 8|16 The size of the sum value.
         :return:
         """
-        if bitwidth == 8:
-            self.stack_pointer -= 1
-            return '<[<+>-]'
-        elif bitwidth == 16:
-            self.stack_pointer -= 4
-            return ''.join([
-                self.left(1, bitwidth=16),
-                '>[<',                          # While y high bits are nonzero
-                self.left(1, bitwidth=16),   #      Move to x
-                self.add(256, bitwidth=16),  #      Add 256 to x
-                self.right(1, bitwidth=16),  #      Move to y
-                self.sub(256, bitwidth=16),  #      Subtract 256 from y
-                '>]<[',                         # End while. While y low bits are nonzero
-                self.left(1, bitwidth=16),
-                self.add(1, bitwidth=16),
-                self.right(1, bitwidth=16),
-                self.sub(1, bitwidth=16),
-                ']'
-            ])
+        if a_bits == 8 and b_bits == 8 and out_bits == 8:
+            return self.plus_8_8_8()
+        elif a_bits == 16 and b_bits == 16 and out_bits == 16:
+            return self.plus_16_16_16()
+
+    def plus_8_8_8(self):
+        """
+        Input:  [... a b | 0]
+        Output: [... c | 0 0]
+
+        Pops b off the stack. Pops a off the stack. Pushes the sum of (a+b) % 256 to the stack.
+        """
+        self.stack_pointer -= 1
+        return '<[<+>-]'
+
+    def plus_16_16_16(self):
+        """
+        Input:  [... a a 0 0 b b 0 0 | 0]
+        Output: [... c c 0 0 | 0 0 0 0 0]
+
+        Pops b off the stack. Pops a off the stack. Pushes the sum of (a+b) % 256 to the stack.
+        """
+        self.stack_pointer -= 4
+        return ''.join([
+            self.left(1, bitwidth=16),
+            '>[<',  # While y high bits are nonzero
+            self.left(1, bitwidth=16),
+            self.add(256, bitwidth=16),
+            self.right(1, bitwidth=16),
+            self.sub(256, bitwidth=16),
+            '>]<[',
+            self.left(1, bitwidth=16),
+            self.add(1, bitwidth=16),
+            self.right(1, bitwidth=16),
+            self.sub(1, bitwidth=16),
+            ']'
+        ])
 
     def minus(self, bitwidth=8):
         """
@@ -345,4 +369,51 @@ class Assembler:
             ']',
             self.pop()
         ])
+
+    def swap(self, bitwidth=8):
+        """
+        Pops b off the stack. Pops a off the stack. Pushes b onto the stack. Pushes a onto the stack.
+        :param bitwidth:
+        :return:
+        """
+        if bitwidth == 8:
+            return ''.join([                    # [a, b | 0]
+                '<[>+<-]',                      # [a | 0, b]
+                '<[>+<-]>>',                    # [0, a | b]
+                '[<<+>>-]'                      # [b, a | 0]
+            ])
+
+    def get_indirect(self, a, bitwidth=8):
+        """
+        Pops an address off the stack. Pushes the value at that address onto the stack.
+
+        :param a: The address of the first cell in the array of cells. Set to 0 for absolute address.
+        :param bitwidth:
+        :return: Pushes a[i] onto the stack.
+        """
+        if bitwidth == 8:
+            return ''.join([                                # [a ... x ... i | 0]
+                self.load(0, bitwidth=8),                 # [a ... x ... i 0 | 0]
+                self.swap(bitwidth=8),                      # [a ... x ... 0 i | 0]
+                '<[[>]+[<]>-]>[>]',                        # [a ... x ... 0 0 1 ... 1 1 | 0]
+                self.push(a, bitwidth=8),                   # [a ... x ... 0 0 1 ... 1 1 | x]
+                '<<[->[<+>-]<<]>>',                         # [a ... x ... 0 0 x | 0]
+                self.swap(bitwidth=8),
+                self.pop(bitwidth=8),
+                self.swap(bitwidth=8),
+                self.pop(bitwidth=8)                        # [a ... x ... x | 0]
+            ])
+
+    def set_indirect(self, a, bitwidth=8):
+        """
+        Pops the top value off the stack as the index (a[x]).
+        Pops the next value off the stack as the value (y).
+        Sets a[x] = y.
+        :param a:
+        :param bitwidth:
+        :return:
+        """
+        if bitwidth == 8:
+            return ''
+
 

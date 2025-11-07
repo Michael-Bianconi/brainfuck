@@ -52,6 +52,17 @@ class TestAssembler(TestCase):
                 self.assertEqual([0, 0], result[2:])
                 self.assertEqual(0, self.assembler.stack_pointer)
 
+    def test_load_8bit(self):
+        cases = [0, 1, 5, 254, 255]
+
+        for case in cases:
+            with self.subTest(load=case):
+                self.setUp()
+                self.interpreter.run(self.assembler.load(case, bitwidth=8))
+                self.assertEqual(case, self.interpreter.memory[0])
+                self.assertEqual([0, 0, 0], self.interpreter.memory[1:4])
+                self.assertEqual(1, self.assembler.stack_pointer)
+
     def test_load_16bit(self):
         cases = [0, 1, 5, 254, 255, 256, 3000, 65535, 65536]
 
@@ -75,7 +86,7 @@ class TestAssembler(TestCase):
                 source = ''.join([
                     self.assembler.load(case[0], bitwidth=16),
                     self.assembler.load(case[1], bitwidth=16),
-                    self.assembler.plus(bitwidth=16)
+                    self.assembler.plus(16,16,16)
                 ])
                 self.interpreter.run(source)
                 result = self.interpreter.memory[:8]
@@ -239,5 +250,67 @@ class TestAssembler(TestCase):
                 self.assertEqual([0, 0, 0], result[1:])
                 self.assertEqual(1, self.assembler.stack_pointer)
 
+    def test_swap_8bit(self):
+
+        cases = [[5, 5], [0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255]]
+        cases.extend([x[::-1] for x in cases])
+
+        for case in cases:
+            with self.subTest(values=case):
+                self.setUp()
+                source = ''.join([
+                    self.assembler.load(case[0]),
+                    self.assembler.load(case[1]),
+                    self.assembler.swap(bitwidth=8)
+                ])
+                self.interpreter.run(source)
+                self.assertEqual(self.interpreter.memory[0], case[1], msg=self.interpreter.memory[0:12])
+                self.assertEqual(self.interpreter.memory[1], case[0], msg=self.interpreter.memory[0:12])
+                self.assertEqual(self.interpreter.memory[2], 0)
+                self.assertEqual(self.assembler.stack_pointer, 2)
+
+    def test_get_indirect(self):
+        cases = [
+            [[1], 0],
+            [[1, 2, 3, 4, 5], 0],
+            [[1, 2, 3, 4, 5], 1],
+            [[1, 2, 3, 4, 5], 2],
+            [[1, 2, 3, 4, 5], 3],
+            [[1, 2, 3, 4, 5], 4],
+        ]
+        prepost = [[], [0], [1], [0, 0], [1, 0], [1, 1]]
+
+        for case in cases:
+            array, index = case
+            for prefix in prepost:
+                for suffix in prepost:
+                    with self.subTest(prefix=prefix, array=array, suffix=suffix, index=index):
+                        self.setUp()
+                        source = ''.join([
+                            ''.join([self.assembler.load(x) for x in prefix]),
+                            ''.join([self.assembler.load(x) for x in array]),
+                            ''.join([self.assembler.load(x) for x in suffix]),
+                            self.assembler.load(index),
+                            self.assembler.get_indirect(len(prefix), bitwidth=8)
+                        ])
+                        self.interpreter.run(source)
+                        self.assertEqual(self.assembler.stack_pointer, len(prefix + array + suffix)+1,
+                                         msg=self.repr())
+                        self.assertListEqual(self.interpreter.memory[:self.assembler.stack_pointer+1],
+                                             prefix + array + suffix + [array[index]] + [0],
+                                             msg=self.repr())
+
     def assertEqual16bit(self, expected, i):
         self.assertEqual(expected, self.interpreter.memory[i] + (self.interpreter.memory[i+1] * 256))
+
+    def repr(self, start=0, end=20):
+        result = ''
+        for i in range(start, end):
+            if i == self.assembler.stack_pointer:
+                result += 's'
+            elif i == self.interpreter.dptr:
+                result += 'd'
+            else:
+                result += ' '
+            result += str(self.interpreter.memory[i])
+        return result
