@@ -260,6 +260,18 @@ class Assembler:
                 ']'
             ])
 
+    def bitshift_left(self, bitwidth=8):
+        """
+        Pops b off the stack. Pops a off the stack. Pushes a << b onto the stack.
+        :param bitwidth:
+        :return:
+        """
+        if bitwidth == 8:
+            self.stack_pointer -= 1
+            return ''.join([        # [a b | 0]
+
+            ])
+
     def is_nonzero(self, bitwidth=8):
         if bitwidth == 8:
             return ''.join([
@@ -361,14 +373,21 @@ class Assembler:
 
         :return:
         """
-        return ''.join([            # [x, y, 0]
-            '<[>'                   # If equal, enter inner code block.
+        self.stack_pointer -= 1
+        return ''.join([
+            '<[[-]'
         ])
 
     def if_zero(self):
         return ''.join([
             self.logical_not(),
             self.if_nonzero()
+        ])
+
+    def if_equal(self):
+        return ''.join([
+            self.minus(),
+            self.if_zero()
         ])
 
     def end_if(self):
@@ -378,7 +397,6 @@ class Assembler:
         """
         return ''.join([
             ']',
-            self.pop()
         ])
 
     def swap(self, bitwidth=8):

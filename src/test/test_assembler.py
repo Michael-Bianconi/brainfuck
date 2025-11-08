@@ -55,24 +55,24 @@ class TestAssembler(TestCase):
     def test_load_8bit(self):
         cases = [0, 1, 5, 254, 255]
 
-        def source(case):
+        def source(case, offset=0):
             return self.assembler.load(case, bitwidth=8)
 
-        def check(case):
-            self.assertStackContents([case], 1)
+        def check(case, offset=0):
+            self.assertStackContents([case], offset+1)
 
         self.run_and_check(cases, source, check)
 
     def test_load_16bit(self):
         cases = [0, 1, 5, 254, 255, 256, 3000, 65535, 65536]
 
-        def source(case):
+        def source(case, offset=0):
             return self.assembler.load(case, bitwidth=16)
 
-        def check(case):
+        def check(case, offset=0):
             lo = case & 0b0000000011111111
             hi = (case & 0b1111111100000000) >> 8
-            self.assertStackContents([lo, hi, 0, 0], 4)
+            self.assertStackContents([lo, hi, 0, 0], 4+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -82,17 +82,17 @@ class TestAssembler(TestCase):
             (6553, 1), (1, 6553), (30000, 5), (5, 30000), (65530, 5), (5, 65530), (65535, 2), (2, 65535)
         ]
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case[0], bitwidth=16),
                     self.assembler.load(case[1], bitwidth=16),
                     self.assembler.plus(16,16,16)
             ])
 
-        def check(case):
+        def check(case, offset=0):
             lo = sum(case) & 0b0000000011111111
             hi = (sum(case) & 0b1111111100000000) >> 8
-            self.assertStackContents([lo, hi, 0, 0], 4)
+            self.assertStackContents([lo, hi, 0, 0], 4+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -101,17 +101,17 @@ class TestAssembler(TestCase):
             (0, 0), (0, 1), (5, 5), (2, 253), (1, 255), (256, 10), (1000, 2000), (65534, 1),
             (6553, 1), (1, 6553), (30000, 5), (5, 30000), (65530, 5), (5, 65530), (65535, 2), (2, 65535)]
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case[0], bitwidth=16),
                     self.assembler.load(case[1], bitwidth=16),
                     self.assembler.minus(16)
             ])
 
-        def check(case):
+        def check(case, offset=0):
             lo = ((case[0]-case[1]) % 65536) & 0b0000000011111111
             hi = (((case[0]-case[1]) % 65536) & 0b1111111100000000) >> 8
-            self.assertStackContents([lo, hi, 0, 0], 4)
+            self.assertStackContents([lo, hi, 0, 0], 4+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -119,29 +119,29 @@ class TestAssembler(TestCase):
         cases = [[0, 0], [1, 0], [1, 1], [1, 5], [1, 255], [5, 5], [30, 3], [30, 30], [255, 0], [255, 1], [255, 255]]
         cases.extend([c[::-1] for c in cases])
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                 self.assembler.load(case[0]),
                 self.assembler.load(case[1]),
                 self.assembler.multiply()
             ])
 
-        def check(case):
-            self.assertStackContents([(case[0] * case[1]) % 256], 1)
+        def check(case, offset=0):
+            self.assertStackContents([(case[0] * case[1]) % 256], 1+offset)
 
         self.run_and_check(cases, source, check)
 
     def test_logical_not(self):
         cases = [0, 1, 2, 5, 255]
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case),
                     self.assembler.logical_not()
             ])
 
-        def check(case):
-            self.assertStackContents([0 if case > 0 else 1], 1)
+        def check(case, offset=0):
+            self.assertStackContents([0 if case > 0 else 1], 1+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -149,15 +149,15 @@ class TestAssembler(TestCase):
         cases = [[0, 0], [1, 0], [5, 0], [255, 0], [1, 1], [5, 5], [255, 255]]
         cases.extend([x[::-1] for x in cases])
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case[0], bitwidth=8),
                     self.assembler.load(case[1], bitwidth=8),
                     self.assembler.logical_and(bitwidth=8)
             ])
 
-        def check(case):
-            self.assertStackContents([(case[0] > 0 and case[1] > 0)], 1)
+        def check(case, offset=0):
+            self.assertStackContents([(case[0] > 0 and case[1] > 0)], 1+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -165,15 +165,15 @@ class TestAssembler(TestCase):
         cases = [[0, 0], [1, 0], [5, 0], [255, 0], [1, 1], [5, 5], [255, 255]]
         cases.extend([x[::-1] for x in cases])
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case[0], bitwidth=8),
                     self.assembler.load(case[1], bitwidth=8),
                     self.assembler.logical_or(bitwidth=8)
             ])
 
-        def check(case):
-            self.assertStackContents([(case[0] > 0 or case[1] > 0)], 1)
+        def check(case, offset=0):
+            self.assertStackContents([(case[0] > 0 or case[1] > 0)], 1+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -182,15 +182,15 @@ class TestAssembler(TestCase):
         cases = [[5, 5], [0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255]]
         cases.extend([x[::-1] for x in cases])
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case[0]),
                     self.assembler.load(case[1]),
                     self.assembler.equals()
             ])
 
-        def check(case):
-            self.assertStackContents([1 if case[0] == case[1] else 0], 1)
+        def check(case, offset=0):
+            self.assertStackContents([1 if case[0] == case[1] else 0], 1+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -200,36 +200,33 @@ class TestAssembler(TestCase):
                  [0, 256], [0, 3000], [0, 65535], [256, 256, 65535]]
         cases.extend([x[::-1] for x in cases])
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.load(case[0], bitwidth=16),
                     self.assembler.load(case[1], bitwidth=16),
                     self.assembler.equals(bitwidth=16)
             ])
 
-        def check(case):
-            self.assertStackContents([1 if case[0] == case[1] else 0], 1)
+        def check(case, offset=0):
+            self.assertStackContents([1 if case[0] == case[1] else 0], 1+offset)
 
         self.run_and_check(cases, source, check)
 
     def test_push_8bit(self):
         cases = [(0, 0, 0), (1, 0, 0), (5, 5, 5), (255, 0, 0), (0, 0, 255), (255, 255, 255)]
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
-                        self.assembler.aloc('x1', 1),
-                        self.assembler.aloc('x2', 1),
-                        self.assembler.aloc('x3', 1),
-                        self.assembler.setvar(self.assembler.vtable['x1'], case[0], bitwidth=8),
-                        self.assembler.setvar(self.assembler.vtable['x2'], case[1], bitwidth=8),
-                        self.assembler.setvar(self.assembler.vtable['x3'], case[2], bitwidth=8),
-                        self.assembler.push(self.assembler.vtable['x1'], bitwidth=8),
-                        self.assembler.push(self.assembler.vtable['x2'], bitwidth=8),
-                        self.assembler.push(self.assembler.vtable['x3'], bitwidth=8),
+                        self.assembler.load(case[0], bitwidth=8),
+                        self.assembler.load(case[1], bitwidth=8),
+                        self.assembler.load(case[2], bitwidth=8),
+                        self.assembler.push(offset, bitwidth=8),
+                        self.assembler.push(offset+1, bitwidth=8),
+                        self.assembler.push(offset+2, bitwidth=8),
             ])
 
-        def check(case):
-            self.assertStackContents(list(case + case), 6)
+        def check(case, offset):
+            self.assertStackContents(list(case + case), 6 + offset)
 
         self.run_and_check(cases, source, check)
 
@@ -238,39 +235,36 @@ class TestAssembler(TestCase):
                  (0, 256, 3000), (255, 256, 65535)
         ]
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
-                    self.assembler.aloc('x1', 1, bitwidth=16),
-                    self.assembler.aloc('x2', 1, bitwidth=16),
-                    self.assembler.aloc('x3', 1, bitwidth=16),
-                    self.assembler.setvar(self.assembler.vtable['x1'], case[0], bitwidth=16),
-                    self.assembler.setvar(self.assembler.vtable['x2'], case[1], bitwidth=16),
-                    self.assembler.setvar(self.assembler.vtable['x3'], case[2], bitwidth=16),
-                    self.assembler.push(self.assembler.vtable['x1'], bitwidth=16),
-                    self.assembler.push(self.assembler.vtable['x2'], bitwidth=16),
-                    self.assembler.push(self.assembler.vtable['x3'], bitwidth=16),
+                    self.assembler.load(case[0], bitwidth=16),
+                    self.assembler.load(case[1], bitwidth=16),
+                    self.assembler.load(case[2], bitwidth=16),
+                    self.assembler.push(offset, bitwidth=16),
+                    self.assembler.push(offset+4, bitwidth=16),
+                    self.assembler.push(offset+8, bitwidth=16),
             ])
 
-        def check(case):
+        def check(case, offset=0):
             expected = []
             for i in case + case:
                 expected.extend(self.to16bit(i))
-            self.assertStackContents(expected, 24)
+            self.assertStackContents(expected, 24 + offset)
 
         self.run_and_check(cases, source, check)
 
     def test_setvar_8bit(self):
         cases = [0, 1, 5, 254, 255, 256, 3000]
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                     self.assembler.aloc('x', 1, bitwidth=8),
                     self.assembler.setvar(self.assembler.vtable['x'], 5, bitwidth=8),
                     self.assembler.setvar(self.assembler.vtable['x'], case, bitwidth=8)
             ])
 
-        def check(case):
-            self.assertStackContents([case % 256], 1)
+        def check(case, offset=0):
+            self.assertStackContents([case % 256], 1+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -279,15 +273,15 @@ class TestAssembler(TestCase):
         cases = [[5, 5], [0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255]]
         cases.extend([x[::-1] for x in cases])
 
-        def source(case):
+        def source(case, offset=0):
             return ''.join([
                 self.assembler.load(case[0]),
                 self.assembler.load(case[1]),
                 self.assembler.swap(bitwidth=8)
             ])
 
-        def check(case):
-            self.assertStackContents(case[::-1], 2)
+        def check(case, offset=0):
+            self.assertStackContents(case[::-1], 2+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -295,31 +289,84 @@ class TestAssembler(TestCase):
         arrays = [
             [[1], 0],
             [[1, 2, 3, 4, 5], 0],
-            [[1, 2, 3, 4, 5], 1],
-            [[1, 2, 3, 4, 5], 2],
-            [[1, 2, 3, 4, 5], 3],
             [[1, 2, 3, 4, 5], 4],
         ]
-        noise = [[], [0], [1], [0, 0], [1, 0], [1, 1]]
         cases = []
-        for before in noise:
-            for array in arrays:
-                for after in noise:
-                    cases.append([before, array, after])
+        for array in arrays:
+            for after in [[], [0], [1], [0,1],[1,0],[1,1]]:
+                cases.append([array, after])
 
-        def source(case):
-            prefix, [data, index], suffix = case
+        def source(case, offset=0):
+            [data, index], suffix = case
             return ''.join([
-                ''.join([self.assembler.load(x) for x in prefix]),
                 ''.join([self.assembler.load(x) for x in data]),
                 ''.join([self.assembler.load(x) for x in suffix]),
                 self.assembler.load(index),
-                self.assembler.get_indirect(len(prefix), bitwidth=8)
+                self.assembler.get_indirect(offset, bitwidth=8)
             ])
 
-        def check(case):
-            prefix, [data, index], suffix = case
-            self.assertStackContents(prefix + data + suffix + [data[index]], len(prefix + data + suffix) + 1)
+        def check(case, offset=0):
+            [data, index], suffix = case
+            self.assertStackContents(data + suffix + [data[index]], len(data + suffix) + 1 + offset)
+
+        self.run_and_check(cases, source, check)
+
+    def test_if_nonzero(self):
+
+        cases = [0, 1, 255]
+
+        def source(case, offset=0):
+            return ''.join([
+                self.assembler.load(5),
+                self.assembler.load(case),
+                self.assembler.if_nonzero(),
+                self.assembler.load(5),
+                self.assembler.plus(8, 8, 8),
+                self.assembler.end_if()
+            ])
+
+        def check(case, offset=0):
+            self.assertStackContents([10 if case > 0 else 5], 1+offset)
+
+        self.run_and_check(cases, source, check)
+
+    def test_if_zero(self):
+
+        cases = [0, 1, 255]
+
+        def source(case, offset=0):
+            return ''.join([
+                self.assembler.load(5),
+                self.assembler.load(case),
+                self.assembler.if_zero(),
+                self.assembler.load(5),
+                self.assembler.plus(8, 8, 8),
+                self.assembler.end_if()
+            ])
+
+        def check(case, offset=0):
+            self.assertStackContents([10 if case == 0 else 5], 1+offset)
+
+        self.run_and_check(cases, source, check)
+
+    def test_if_equal(self):
+
+        cases = [[0, 0], [0, 1], [0, 255], [1, 1], [1, 5], [5, 255], [255, 255]]
+        cases.extend([c[::-1] for c in cases])
+
+        def source(case, offset=0):
+            return ''.join([
+                self.assembler.load(5),
+                self.assembler.load(case[0]),
+                self.assembler.load(case[1]),
+                self.assembler.if_equal(),
+                self.assembler.load(5),
+                self.assembler.plus(8, 8, 8),
+                self.assembler.end_if()
+            ])
+
+        def check(case, offset=0):
+            self.assertStackContents([10 if case[0] == case[1] else 5], 1+offset)
 
         self.run_and_check(cases, source, check)
 
@@ -344,7 +391,10 @@ class TestAssembler(TestCase):
 
     def run_and_check(self, cases, source, check):
         for case in cases:
-            with self.subTest(values=case):
-                self.setUp()
-                self.interpreter.run(source(case))
-                check(case)
+            for noise in [[], [0], [1], [0,1], [1,0], [1,1]]:
+                with self.subTest(values=case, noise=noise):
+                    self.setUp()
+                    self.interpreter.run(
+                        ''.join([self.assembler.load(n) for n in noise]) +
+                        source(case, offset=len(noise)))
+                    check(case, offset=len(noise))
