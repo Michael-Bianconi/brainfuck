@@ -198,42 +198,40 @@ class Assembler:
         :return:
         """
         if a_bits == 8 and b_bits == 8 and out_bits == 8:
-            return self.plus_8_8_8()
+            self.stack_pointer -= 1
+            return '<[<+>-]'
         elif a_bits == 16 and b_bits == 16 and out_bits == 16:
-            return self.plus_16_16_16()
+            self.stack_pointer -= 4
+            return ''.join([
+                self.left(1, bitwidth=16),
+                '>[<',  # While y high bits are nonzero
+                self.left(1, bitwidth=16),
+                self.add(256, bitwidth=16),
+                self.right(1, bitwidth=16),
+                self.sub(256, bitwidth=16),
+                '>]<[',
+                self.left(1, bitwidth=16),
+                self.add(1, bitwidth=16),
+                self.right(1, bitwidth=16),
+                self.sub(1, bitwidth=16),
+                ']'
+            ])
 
-    def plus_8_8_8(self):
+    def multiply(self, bitwidth=8):
         """
-        Input:  [... a b | 0]
-        Output: [... c | 0 0]
-
-        Pops b off the stack. Pops a off the stack. Pushes the sum of (a+b) % 256 to the stack.
+        Pops a and b off the stack. Pushes c = a * b onto the stack.
+        :param bitwidth:
+        :return:
         """
-        self.stack_pointer -= 1
-        return '<[<+>-]'
-
-    def plus_16_16_16(self):
-        """
-        Input:  [... a a 0 0 b b 0 0 | 0]
-        Output: [... c c 0 0 | 0 0 0 0 0]
-
-        Pops b off the stack. Pops a off the stack. Pushes the sum of (a+b) % 256 to the stack.
-        """
-        self.stack_pointer -= 4
-        return ''.join([
-            self.left(1, bitwidth=16),
-            '>[<',  # While y high bits are nonzero
-            self.left(1, bitwidth=16),
-            self.add(256, bitwidth=16),
-            self.right(1, bitwidth=16),
-            self.sub(256, bitwidth=16),
-            '>]<[',
-            self.left(1, bitwidth=16),
-            self.add(1, bitwidth=16),
-            self.right(1, bitwidth=16),
-            self.sub(1, bitwidth=16),
-            ']'
-        ])
+        if bitwidth == 8:
+            self.stack_pointer -= 1
+            return ''.join([                    # [a b | 0 0]   [a 0 | 0 0]     [0 b | 0 0]     [0 0 | 0 0]
+                '<<[>>>+<<<-]>>>',              # [0 b 0 | a]   [0 0 0 | a]     [0 b 0 | 0]     [0 0 0 | 0]
+                '[<<[<+>>+<-]',                 # [b | 0 b a]
+                '>[<+>-]>',                     # [b b 0 | a]
+                '-]',                           # [c b 0 | 0]
+                '<<[-]'
+            ])
 
     def minus(self, bitwidth=8):
         """
@@ -296,6 +294,30 @@ class Assembler:
                 '[-[<<+>>[-]]]<'                 # [0 | 0, 0]        [0 | 0, 0]      [0 | 0, 0]      [1 | 0, 0]
             ])
 
+    def logical_or(self, bitwidth=8):
+        """
+        Pops the top two values off the stack. If either are non-zero, pushes 1 onto the stack. Otherwise, pushes 0.
+        :param bitwidth:
+        :return:
+        """
+        if bitwidth == 8:
+            self.stack_pointer -= 1
+            return ''.join([                # [0, 0 | 0]        [n, 0 | 0]      [0, n | 0]      [n, m | 0]
+                '<[[-]<[-]+>]',             # [0 | 0, 0]        [n | 0, 0]      [1 | 0, 0]      [1 | 0, 0]
+                self.is_nonzero(bitwidth=8)
+            ])
+
+    def logical_not(self):
+        """
+        Pops the top value from the stack. If it is non-zero, pushes 0. If it is 0, pushes 1.
+        :return:
+        """
+        return ''.join([        # [x, 0]
+            self.load(0),       # [x, 0, 0]
+            self.equals()       # If zero, [1, 0]. If nonzero, [0, 0]
+        ])
+
+
     def equals(self, bitwidth=8):
         """
         Pops the top two values off the stack. If they are the same, pushes 1 onto the stack.
@@ -327,17 +349,6 @@ class Assembler:
             ])
             self.stack_pointer -= 8
             return source
-
-
-    def logical_not(self):
-        """
-        Pops the top value from the stack. If it is non-zero, pushes 0. If it is 0, pushes 1.
-        :return:
-        """
-        return ''.join([        # [x, 0]
-            self.load(0),       # [x, 0, 0]
-            self.equals()       # If zero, [1, 0]. If nonzero, [0, 0]
-        ])
 
     def if_nonzero(self):
         """
@@ -415,5 +426,3 @@ class Assembler:
         """
         if bitwidth == 8:
             return ''
-
-
