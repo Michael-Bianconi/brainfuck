@@ -2,123 +2,58 @@ import pyparsing as pp
 from pyparsing import ParserElement, ParseResults
 
 
-class Symbol:
+class Operand:
+    """
+    Operand Types:
 
-    def __init__(self, parse_result):
-        self._value = parse_result[0]['Value']
-        self._bitwidth = parse_result[0]['Bitwidth']
+    Immediate: An integer value (e.g. 5)
+    Symbol: A string that does not start with a number, which will be associated with an address in memory
+    Address: A location in memory, either immediate (@6) or symbolic (@a)
+    Top: A special symbol denoting the top of the stack
+    Raw: Proper brainfuck code (symbols include +-[],.<>)
 
-    @property
-    def value(self):
-        return self._value
+    Note:
+        The @ in "@a" means "use the value at address a". This is in contrast to just "a", which means
+        "treat a as an immediate equal to the address itself".
 
-    @property
-    def bitwidth(self):
-        return self._bitwidth
+        Example (assume a is associated with address 20, and memory[20] = 100):
+            PUSH @top @a        # Push 100 onto the stack
+            PUSH @top &a        # Push 20 onto the stack
+            PUSH @top a         # ERROR unexpected Symbol
+    """
 
-    def __repr__(self):
-        return f"{self._value}" + (f":{self._bitwidth}" if self._bitwidth != 8 else "")
-
-
-class Immediate:
-
-    def __init__(self, parse_result):
-        self._value = parse_result[0]['Value']
-        self._bitwidth = parse_result[0]['Bitwidth']
-
-    @property
-    def value(self):
-        return self._value
-
-    @property
-    def bitwidth(self):
-        return self._bitwidth
-
-    def __repr__(self):
-        return f"{self._value}" + (f":{self._bitwidth}" if self._bitwidth != 8 else "")
-
-
-class Address:
-
-    def __init__(self, parse_result):
-
-        bases = parse_result[0]["Base"]
-        indexes = parse_result[0]["Index"]
-
-        self._base = next((bases[c] for c in ("Symbol", "Immediate") if bases.get(c) is not None))
-
-        if "Base" in indexes:
-            self._index = next((indexes["Base"][c] for c in ("Symbol", "Immediate") if indexes["Base"].get(c) is not None))
-            self._indirect = True
-        elif "Top" in indexes:
-            self._index = indexes["Top"]
-            self._indirect = True
+    def __init__(self, parse_result, value_type):
+        if value_type == "Raw":
+            self._value = ''.join(parse_result['Raw'].as_list())
         else:
-            self._index = indexes["Immediate"]
-            self._indirect = False
+            self._value = parse_result[0]
+        self._value_type = value_type
 
-    def resolve_direct(self, vtable: dict):
-        base = self.resolve_base(vtable)
-        index = self.resolve_index(vtable)
-        cell_jump = 4 if self.base.bitwidth == 16 else 1
-        return base + (cell_jump * index)
+    def resolve(self, vtable):
 
-    def resolve_base(self, vtable: dict) -> int:
-        result = 0
-        if isinstance(self._base, Symbol):
-            result += vtable[self._base.value]
+        # Addresses may be @0 or @a
+        if self._value_type == "Address":
+            try:
+                return int(self._value)
+            except ValueError:
+                return vtable[self._value]
+
+        # Immediates may be 5 or &a
+        elif self._value_type == "Immediate":
+            if self._value.startswith("&"):
+                return vtable[self._value[1:]]
+            else:
+                return int(self._value)
+
         else:
-            result += self._base.value
-        return result
-
-    def resolve_index(self, vtable: dict) -> int:
-        result = 0
-        if isinstance(self._index, Immediate):
-            result += self._index.value
-        else:
-            result += self._index.resolve_base(vtable)
-        return result
+            return self._value
 
     @property
-    def indirect(self):
-        return self._indirect
-
-    @property
-    def base(self):
-        return self._base
-
-    @property
-    def index(self):
-        return self._index
+    def value_type(self):
+        return self._value_type
 
     def __repr__(self):
-        return f"@{self._base}" + (
-            f"[{'@' if Symbol == type(self._index) else ''}{self._index}]" if isinstance(self._index, Top) or self._index.value != 0 else "")
-
-
-class Top:
-
-    def __init__(self, parse_result):
-        self._bitwidth = parse_result[0]['Bitwidth']
-
-    @property
-    def bitwidth(self):
-        return self._bitwidth
-
-    def __repr__(self):
-        return f"@top" + (f":{self._bitwidth}" if self._bitwidth != 8 else "")
-
-class Raw:
-
-    def __init__(self, parse_result):
-        self._value = ''.join(parse_result['Raw'].as_list())
-
-    @property
-    def value(self):
-        return self._value
-
-    def __repr__(self):
-        return self.value
+        return f"{self._value}"
 
 
 class Parser:
@@ -131,33 +66,28 @@ class Parser:
     def parse(self, source: str):
         source = '\n'.join([s for s in source.splitlines() if len(s.strip()) > 0])
         ParserElement.set_default_whitespace_chars(' \t')
-        bitwidth = pp.Combine(pp.Suppress(":") + pp.Word(pp.nums)) \
-            .set_results_name("Bitwidth") \
-            .set_parse_action(pp.common.convert_to_integer)
         immediate = pp.Combine(
-            pp.Word(pp.nums)("Value").set_parse_action(pp.common.convert_to_integer) + pp.Opt(bitwidth, 8)) \
-            .set_results_name("Immediate") \
-            .set_parse_action(lambda orig, loc, result: Immediate(result))
-        symbol = pp.Combine((~pp.Keyword("top") + pp.Word(pp.alphas)("Value")) + pp.Opt(bitwidth, 8)) \
-            .set_results_name("Symbol") \
-            .set_parse_action(lambda orig, loc, result: Symbol(result))
-        top = pp.Combine(pp.Suppress("@") + pp.Keyword("top") + pp.Opt(bitwidth, 8))("Top") \
-            .set_parse_action(lambda orig, loc, result: Top(result))
-        base_address = pp.Combine(pp.Suppress("@") + (immediate ^ symbol))("Base")
-        address = pp.Forward()
-        index = pp.Combine(pp.Suppress('[') + (immediate ^ base_address ^ top) + pp.Suppress(']'))("Index")
-        address <<= pp.Combine(base_address + pp.Opt(index, immediate.parse_string("0"))) \
-            .set_results_name("Address") \
-            .set_parse_action(lambda orig, loc, result: Address(result))
+            (pp.Opt(pp.Literal('-')) + pp.Word(pp.nums))
+            .set_parse_action(lambda o, l, r: int(''.join(r.as_list())))) \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Immediate"))
+        address_of = pp.Combine(pp.Literal("&") + ~pp.Keyword("top") + pp.Word(pp.alphas)) \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Immediate"))
+        symbol = pp.Combine(~pp.Keyword("top") + pp.Word(pp.alphas)) \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Symbol"))
+        top = pp.Combine(pp.Suppress("@") + pp.Keyword("top"))("Top") \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Top"))
+        address = pp.Combine(pp.Suppress("@") + (immediate ^ symbol)) \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Address"))
         raw = pp.Word("+-><[],.")[1,...]("Raw") \
             .leave_whitespace(False) \
-            .set_parse_action(lambda orig, loc, result: Raw(result))
-        operand = pp.Group(raw ^ immediate ^ symbol ^ address ^ top)
-        operands = pp.ZeroOrMore(operand).set_results_name("Operands")
-        mnemonic = pp.Word(pp.alphas + "_", exact=4)("Mnemonic")
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Raw"))
+        operands = pp.ZeroOrMore(pp.Group(raw ^ immediate ^ symbol ^ address ^ address_of ^ top)) \
+            .set_results_name("Operands")
+        mnemonic = pp.Combine(pp.Word(pp.alphas + "_", exact=4) +
+                              pp.ZeroOrMore(pp.Combine(pp.Literal(":") + pp.Word(pp.nums))))("Mnemonic")
         comment = ("#" + pp.rest_of_line)("Comment")
-        instruction = pp.Group(comment ^ (mnemonic + operands + pp.Optional(comment)))
-        program = (pp.OneOrMore(instruction + pp.Suppress(pp.LineEnd())))("Program")
+        instruction = pp.Group(mnemonic + operands + pp.LineEnd())
+        program = pp.ZeroOrMore(instruction ^ pp.Suppress(pp.LineEnd()))("Program")
         program.ignore(comment)
         program.set_debug(False)
 
@@ -167,13 +97,30 @@ class Parser:
         return self
 
     def mnemonic(self) -> str:
+        parts = self._current["Mnemonic"].split(":")
+        name = parts[0]
+        bitwidths = parts[1:]
+
+        # 1. No params → return name
+        if not bitwidths:
+            return name
+
+        # 2. All params are "8" → return name
+        if all(p == "8" for p in bitwidths):
+            return name
+
+        # 3. All params are "16" → return name:16
+        if all(p == "16" for p in bitwidths):
+            return f"{name}:16"
+
+        # 4. Otherwise → original string
         return self._current["Mnemonic"]
 
     def operand_count(self) -> int:
         return len(self._current["Operands"])
 
     def operands(self):
-        return [self._current["Operands"][i].values().__next__() for i in range(self.operand_count())]
+        return [o[0] for o in self._current["Operands"]]
 
     def dump(self):
         return self._current.dump()

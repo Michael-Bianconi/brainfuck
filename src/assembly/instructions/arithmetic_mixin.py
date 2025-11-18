@@ -1,91 +1,97 @@
-from src.assembly.instruction import Instruction
-from src.assembly.parser import Address, Immediate, Top
+from src.assembly.instructions.assembler_mixin import AssemblerMixin
 
 
-class ArithmeticMixin:
+class ArithmeticMixin(AssemblerMixin):
 
     def arithmetic_definitions(self):
         return {
-            "SUBT": Instruction(self.subtract, [
-                [Top, Top, Top]
-            ]),
-            "MULT": Instruction(self.multiply, [
-                [Top, Top, Top]
-            ]),
-            "PLUS": Instruction(self.plus, [
-                [Top, Top, Top]])
+            ("SUBT", ("Top", "Top", "Top")): self.subt_8_top_top_top,
+
+            ("SUBT:16", ("Top", "Top", "Top")): self.subt_16_top_top_top,
+
+            ("MULT", ("Top", "Top", "Top")): self.mult_8_top_top_top,
+
+            ("PLUS", ("Top", "Top", "Top")): self.plus_8_top_top_top,
+            ("PLUS", ("Top", "Immediate", "Top")): self.plus_8_top_immediate_top,
+            ("PLUS", ("Top", "Address", "Top")): self.plus_8_top_address_top,
+            ("PLUS", ("Top", "Top", "Immediate")): self.plus_8_top_top_immediate,
+            ("PLUS", ("Top", "Top", "Address")): self.plus_8_top_top_address,
+
+            ("PLUS:16", ("Top", "Top", "Top")): self.plus_16_top_top_top,
         }
 
-    def plus(self, operands, operand_types):
-        """
-        Input:  [... a b | 0]
-        Output: [... a+b | 0 0]
+    def plus_8_top_top_top(self, top1, top2, top3):
+        self.stack_pointer -= 1
+        return '<[<+>-]'
 
-        Pops b off the stack. Pops a off the stack. Pushes the sum of a+b to the stack.
+    def plus_8_top_immediate_top(self, top1, immediate, top2):
+        return self.assemble(f"""
+                PUSH @top {immediate}
+                PLUS @top @top @top
+        """)
 
-        :param a_bits: 8|16 The size of the a value.
-        :param b_bits: 8|16 The size of the b value.
-        :param out_bits: 8|16 The size of the sum value.
-        :return:
-        """
-        dest, left, right = operands
-        if operand_types == [Top, Top, Top] and dest.bitwidth == 8 and left.bitwidth == 8 and right.bitwidth == 8:
-            self.stack_pointer -= 1
-            return '<[<+>-]'
-        elif operand_types == [Top, Top, Top] and dest.bitwidth == 16 and left.bitwidth == 16 and right.bitwidth == 16:
-            self.stack_pointer -= 4
-            return self.assemble(f"""
-                _LFT 1:16
-                _RAW >[<
-                    _LFT 1:16
-                    _ADD 256:16
-                    _RIT 1:16
-                    _SUB 256:16
-                _RAW >]<[
-                    _LFT 1:16
-                    _ADD 1:16
-                    _RIT 1:16
-                    _SUB 1:16
-                _RAW ]
-            """)
+    def plus_8_top_address_top(self, top1, address, top2):
+        return self.assemble(f"""
+                PUSH @top @{address}
+                PLUS @top @top @top
+        """)
 
-    def multiply(self, operands, operand_types):
-        """
-        Pops a and b off the stack. Pushes c = a * b onto the stack.
-        :param bitwidth:
-        :return:
-        """
-        dest, left, right = operands
-        if operand_types == [Top, Top, Top] and dest.bitwidth == 8 and left.bitwidth == 8 and right.bitwidth == 8:
-            self.stack_pointer -= 1
-            return ''.join([                    # [a b | 0 0]   [a 0 | 0 0]     [0 b | 0 0]     [0 0 | 0 0]
-                '<<[>>>+<<<-]>>>',              # [0 b 0 | a]   [0 0 0 | a]     [0 b 0 | 0]     [0 0 0 | 0]
-                '[<<[<+>>+<-]',                 # [b | 0 b a]
-                '>[<+>-]>',                     # [b b 0 | a]
-                '-]',                           # [c b 0 | 0]
-                '<<[-]'
-            ])
-        else:
-            raise NotImplementedError()
+    def plus_8_top_top_immediate(self, top1, top2, immediate):
+        return self.assemble(f"""
+                PUSH @top {immediate}
+                PLUS @top @top @top
+        """)
 
-    def subtract(self, operands, operand_types):
-        dest, left, right = operands
-        if operand_types == [Top, Top, Top] and dest.bitwidth == 8 and left.bitwidth == 8 and right.bitwidth == 8:
-            self.stack_pointer -= 1
-            return '<[<->-]'
-        elif operand_types == [Top, Top, Top] and dest.bitwidth == 16 and left.bitwidth == 16 and right.bitwidth == 16:
-            self.stack_pointer -= 4
-            return self.assemble(f"""
-                _LFT 1:16
-                _RAW >[<
-                    _LFT 1:16
-                    _SUB 256:16
-                    _RIT 1:16
-                    _SUB 256:16
-                _RAW >]<[
-                    _LFT 1:16
-                    _SUB 1:16
-                    _RIT 1:16
-                    _SUB 1:16
-                _RAW ]
-            """)
+    def plus_8_top_top_address(self, top1, top2, address):
+        return self.assemble(f"""
+                PUSH @top @{address}
+                PLUS @top @top @top
+        """)
+
+    def plus_16_top_top_top(self, top1, top2, top3):
+        self.stack_pointer -= 4
+        return self.assemble(f"""
+            _LFT:16 1
+            _RAW >[<
+                _LFT:16 1
+                _ADD:16 256
+                _RIT:16 1
+                _SUB:16 256
+            _RAW >]<[
+                _LFT:16 1
+                _ADD:16 1
+                _RIT:16 1
+                _SUB:16 1
+            _RAW ]
+        """)
+
+    def mult_8_top_top_top(self, top1, top2, top3):
+        self.stack_pointer -= 1
+        return ''.join([  # [a b | 0 0]   [a 0 | 0 0]     [0 b | 0 0]     [0 0 | 0 0]
+            '<<[>>>+<<<-]>>>',  # [0 b 0 | a]   [0 0 0 | a]     [0 b 0 | 0]     [0 0 0 | 0]
+            '[<<[<+>>+<-]',  # [b | 0 b a]
+            '>[<+>-]>',  # [b b 0 | a]
+            '-]',  # [c b 0 | 0]
+            '<<[-]'
+        ])
+
+    def subt_8_top_top_top(self, top1, top2, top3):
+        self.stack_pointer -= 1
+        return '<[<->-]'
+
+    def subt_16_top_top_top(self, top1, top2, top3):
+        self.stack_pointer -= 4
+        return self.assemble(f"""
+            _LFT:16 1
+            _RAW >[<
+                _LFT:16 1
+                _SUB:16 256
+                _RIT:16 1
+                _SUB:16 256
+            _RAW >]<[
+                _LFT:16 1
+                _SUB:16 1
+                _RIT:16 1
+                _SUB:16 1
+            _RAW ]
+        """)

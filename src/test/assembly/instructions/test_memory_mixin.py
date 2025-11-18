@@ -9,8 +9,8 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                PUSH @top:8 {case[0]}:8
-                PUSH @top:8 {case[1]}:8
+                PUSH @top {case[0]}
+                PUSH @top {case[1]}
             """
 
         def check(case):
@@ -24,8 +24,8 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                PUSH @top:16 {case[0]}:16
-                PUSH @top:16 {case[1]}:16
+                PUSH:16 @top {case[0]}
+                PUSH:16 @top {case[1]}
             """
 
         def check(case):
@@ -33,18 +33,18 @@ class TestMemoryMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
-    def test_push_top8_direct8(self):
+    def test_push_top8_address8(self):
         cases = [(0, 0, 0), (1, 0, 0), (5, 5, 5), (255, 0, 0), (0, 0, 255), (255, 255, 255)]
 
         def source(case):
             self.assembler.vtable["a"] = 1
             return f"""
-                PUSH @top {case[0]}:8
-                PUSH @top {case[1]}:8
-                PUSH @top {case[2]}:8
+                PUSH @top {case[0]}
+                PUSH @top {case[1]}
+                PUSH @top {case[2]}
                 PUSH @top @0
                 PUSH @top @a
-                PUSH @top @1[1]
+                PUSH @top @2
             """
 
         def check(case):
@@ -57,8 +57,8 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                PUSH @top:8 {case}:8
-                PUSH @top:8 @top:8
+                PUSH @top {case}
+                PUSH @top @top
             """
 
         def check(case):
@@ -71,8 +71,8 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                PUSH @top:16 {case}:16
-                PUSH @top:16 @top:16
+                PUSH:16 @top {case}
+                PUSH:16 @top @top
             """
 
         def check(case):
@@ -103,16 +103,33 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                ALOC a 1:16
-                ALOC b 1:16
-                PUSH @a:16 {255}
-                PUSH @b:16 {0}
-                PUSH @a:16 {case}
-                PUSH @b:16 {case+1}
+                ALOC:16 a 1
+                ALOC:16 b 1
+                PUSH:16 @a {255}
+                PUSH:16 @b {0}
+                PUSH:16 @a {case}
+                PUSH:16 @b {case+1}
             """
 
         def check(case):
             self.assertStackContents(self.to16bit(case) + self.to16bit(case+1), 8)
+
+        self.run_and_check(cases, source, check)
+
+    def test_push_top8_symbol8(self):
+        cases = [0]
+
+        def source(case):
+            return f"""
+                ALOC a 1
+                ALOC b 1
+                PUSH @top &a
+                PUSH @top &b
+                PUSH @top 5
+            """
+
+        def check(case):
+            self.assertStackContents([0, 1, 5], 5)
 
         self.run_and_check(cases, source, check)
 
@@ -121,8 +138,8 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                PUSH @top:8 {case[0]}:8
-                PUSH @top:8 {case[1]}:8
+                PUSH @top {case[0]}
+                PUSH @top {case[1]}
                 SWAP @top @top
             """
 
@@ -150,8 +167,8 @@ class TestMemoryMixin(TestAssembler):
 
         def source(case):
             return f"""
-                PUSH @top:16 {case}
-                POPV @top:16
+                PUSH:16 @top {case}
+                POPV:16 @top
             """
 
         def check(case):
@@ -174,5 +191,46 @@ class TestMemoryMixin(TestAssembler):
 
         def check(case):
             self.assertStackContents([0, case % 256, 0], 3)
+
+        self.run_and_check(cases, source, check)
+
+    def test_geti_top8_top8(self):
+        cases = [0, 1, 2, 3, 4]
+
+        def source(case):
+            return f"""
+                PUSH @top 1
+                PUSH @top 2
+                PUSH @top 3
+                PUSH @top 4
+                PUSH @top 5
+                PUSH @top {case}
+                GETI @top @top
+            """
+
+        def check(case):
+            self.assertStackContents([1, 2, 3, 4, 5, case+1], 6)
+
+        self.run_and_check(cases, source, check)
+
+    def test_seti_top8_top8(self):
+        cases = [0, 1, 2, 3, 4]
+
+        def source(case):
+            return f"""
+                PUSH @top 1
+                PUSH @top 2
+                PUSH @top 3
+                PUSH @top 4
+                PUSH @top 5
+                PUSH @top 10
+                PUSH @top {case}
+                SETI @top @top
+            """
+
+        def check(case):
+            expected = [1, 2, 3, 4, 5]
+            expected[case] = 10
+            self.assertStackContents(expected, 5)
 
         self.run_and_check(cases, source, check)

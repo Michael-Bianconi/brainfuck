@@ -12,7 +12,7 @@ class TestInternalMixin(TestAssembler):
                 cases.append((value, bitwidth))
 
         def source(case):
-            return f"_RIT {case[0]}:{case[1]}"
+            return f"_RIT:{case[1]} {case[0]}"
 
         def check(case):
             self.assertEqual(case[0] * (1 if case[1] == 8 else 4), self.interpreter.dptr)
@@ -31,7 +31,7 @@ class TestInternalMixin(TestAssembler):
         def source(case):
             return f"""
                 _RIT 1000
-                _LFT {case[0]}:{case[1]}
+                _LFT:{case[1]} {case[0]}
             """
 
         def check(case):
@@ -59,7 +59,7 @@ class TestInternalMixin(TestAssembler):
         cases = [0, 1, 5, 255, 256, 3000, 65535, 65536, 65540]
 
         def source(case):
-            return f"_ADD {case}:16"
+            return f"_ADD:16 {case}"
 
         def check(case):
             memory = self.interpreter.memory
@@ -79,8 +79,8 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _ADD {case[0]}:8
-                _SUB {case[1]}:8
+                _ADD {case[0]}
+                _SUB {case[1]}
             """
 
         def check(case):
@@ -102,8 +102,8 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _ADD {case[0]}:16
-                _SUB {case[1]}:16
+                _ADD:16 {case[0]}
+                _SUB:16 {case[1]}
             """
 
         def check(case):
@@ -132,8 +132,8 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _ADD {case[0]}:8
-                _SET {case[1]}:8
+                _ADD {case[0]}
+                _SET {case[1]}
             """
 
         def check(case):
@@ -150,13 +150,13 @@ class TestInternalMixin(TestAssembler):
             (1, 0), (5, 0), (255, 0), (65535, 0),
             (1, 1), (5, 1), (5, 3), (5, 5), (255, 255),
             (257, 1), (257, 5), (3000, 2000), (65535, 2),
-            (0, 1), (0, 5), (5, 10), (255, 256), (5, 665535)
+            (0, 1), (0, 5), (5, 10), (255, 256), (5, 65535)
         ]
 
         def source(case):
             return f"""
-                _ADD {case[0]}:16
-                _SET {case[1]}:16
+                _ADD:16 {case[0]}
+                _SET:16 {case[1]}
             """
 
         def check(case):

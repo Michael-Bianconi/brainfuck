@@ -1,16 +1,11 @@
-from src.assembly.instruction import Instruction
 from src.assembly.instructions.arithmetic_mixin import ArithmeticMixin
+from src.assembly.instructions.comparison_mixin import ComparisonMixin
 from src.assembly.instructions.internal_mixin import InternalMixin
 from src.assembly.instructions.memory_mixin import MemoryMixin
-from src.assembly.parser import Address, Symbol, Immediate, Top, Parser
+from src.assembly.parser import Parser
 
 
-class Assembler(InternalMixin, ArithmeticMixin, MemoryMixin):
-    """
-    Notation:
-        - x:
-
-    """
+class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin):
 
     def __init__(self):
         self.vtable = {}
@@ -18,85 +13,17 @@ class Assembler(InternalMixin, ArithmeticMixin, MemoryMixin):
         self.instructions = {}
         self.instructions.update(self.internal_definitions())
         self.instructions.update(self.arithmetic_definitions())
+        self.instructions.update(self.comparison_definitions())
         self.instructions.update(self.memory_definitions())
-
-    def is_top(self, address):
-        return not address.indirect and address.value == "top"
 
     def assemble(self, source):
         parser = Parser()
         result = ""
         for _ in parser.parse(source):
-            result += self.assemble_instruction(parser)
+            instruction = self.instructions[(parser.mnemonic(), tuple([o.value_type for o in parser.operands()]))]
+            result += instruction(*[o.resolve(self.vtable) for o in parser.operands()])
         return result
 
-    def assemble_instruction(self, parser):
-
-        instruction = self.instructions[parser.mnemonic()]
-        allowed = instruction.operands_match(parser.operands())
-        if allowed is None:
-            raise RuntimeError("Bad instruction: " + parser.dump())
-        else:
-            return instruction.operation(parser.operands(), allowed)
-
-    def bitshift_left(self, bitwidth=8):
-        """
-        Pops b off the stack. Pops a off the stack. Pushes a << b onto the stack.
-        :param bitwidth:
-        :return:
-        """
-        if bitwidth == 8:
-            self.stack_pointer -= 1
-            return ''.join([        # [a b | 0]
-
-            ])
-
-    def is_nonzero(self, bitwidth=8):
-        if bitwidth == 8:
-            return ''.join([
-                '+<[[-]+>-]>',      # [0, 1<, 0]   | [1, 0, 0<]
-                '[->]<<'            # [0<, 0, 0]   | [1<, 0, 0]
-            ])
-
-    def is_zero(self, bitwidth=8):
-        """
-        Pops the top value off the stack. If it's zero, pushes an 8-bit 1 onto the stack.
-        If it's nonzero, pushes an 8-bit zero onto the stack.
-        :param bitwidth:
-        :return:
-        """
-        if bitwidth == 8:           # [n, 0<, 0]
-            return ''.join([        # If n is zero      | If n is nonzero
-                '+<[>-]>',          # [0, 1<, 0]        | [n, 0, 0<]
-                '[<+>->]<<'         # [1<, 0, 0]        |
-            ])
-
-    def logical_and(self, bitwidth=8):
-        """
-        Pops the top two values off the stack. If both are non-zero, pushes 1 onto the stack. Otherwise, pushes 0.
-        :param bitwidth:
-        :return:
-        """
-        if bitwidth == 8:
-            self.stack_pointer -= 1
-            return ''.join([                    # [0, 0 | 0]        [n, 0 | 0]      [0, y | 0]      [x, y | 0]
-                '<<[>>+<<[-]]'                  # [| 0, 0, 0]       [| 0, 0, 1]     [| 0, y, 0]     [| 0, y, 1]
-                '>[>+<[-]]>',                   # [0, 0 | 0]        [0, 0 | 1]      [0, 0 | 1]      [0, 0 | 2]
-                '[-[<<+>>[-]]]<'                 # [0 | 0, 0]        [0 | 0, 0]      [0 | 0, 0]      [1 | 0, 0]
-            ])
-
-    def logical_or(self, bitwidth=8):
-        """
-        Pops the top two values off the stack. If either are non-zero, pushes 1 onto the stack. Otherwise, pushes 0.
-        :param bitwidth:
-        :return:
-        """
-        if bitwidth == 8:
-            self.stack_pointer -= 1
-            return ''.join([                # [0, 0 | 0]        [n, 0 | 0]      [0, n | 0]      [n, m | 0]
-                '<[[-]<[-]+>]',             # [0 | 0, 0]        [n | 0, 0]      [1 | 0, 0]      [1 | 0, 0]
-                self.is_nonzero(bitwidth=8)
-            ])
 
     def logical_not(self):
         """
@@ -246,47 +173,6 @@ class Assembler(InternalMixin, ArithmeticMixin, MemoryMixin):
             self.right(offset)
         ])
 
-    def get_indirect(self, a, bitwidth=8):
-        """
-        Pops an address off the stack. Pushes the value at that address onto the stack.
-
-        :param a: The address of the first cell in the array of cells. Set to 0 for absolute address.
-        :param bitwidth:
-        :return: Pushes a[i] onto the stack.
-        """
-        if bitwidth == 8:
-            return ''.join([                                # [a ... x ... i | 0]
-                self.load(0, bitwidth=8),                 # [a ... x ... i 0 | 0]
-                self.swap(bitwidth=8),                      # [a ... x ... 0 i | 0]
-                '<[[>]+[<]>-]>[>]',                        # [a ... x ... 0 0 1 ... 1 1 | 0]
-                self.push(a, bitwidth=8),                   # [a ... x ... 0 0 1 ... 1 1 | x]
-                '<<[->[<+>-]<<]>>',                         # [a ... x ... 0 0 x | 0]
-                self.swap(bitwidth=8),
-                self.popn(bitwidth=8),
-                self.swap(bitwidth=8),
-                self.popn(bitwidth=8)                        # [a ... x ... x | 0]
-            ])
-
-    def set_indirect(self, a, bitwidth=8):
-        """
-        Pops the top value off the stack as the index (a[i]).
-        Pops the next value off the stack as the value (y).
-        Sets a[i] = y. An a of 0 indicates an absolute positioning.
-        :param a:
-        :param bitwidth:
-        :return:
-        """
-        if bitwidth == 8:
-            source = ''.join([                       # [a ... x ... v i | 0]
-                self.load(0, bitwidth=8),          # [a ... x ... v i 0 | 0]
-                self.swap(bitwidth=8),               # [a ... x ... v 0 i | 0]
-                '<[[>]+[<]>-]>[>]+',                 # [a ... x ... v 0 0 1 ... 1 1 | 0]
-                '<[<]<<[>>>[>]<+[<]<<-]>>>[>]<->',   # [a ... x ... 0 0 0 1 ... 1 1 v | 0
-                self.pop(a-1, bitwidth=8),           # [a ... v ... 0 0 0 1 ... 1 1 | 0 0]
-                '<[-<]<<',                           # [a ... x ... | 0]
-            ])
-            self.stack_pointer -= 2
-            return source
 
     ###########################################################################
     # I/O Instructions                                                        #
