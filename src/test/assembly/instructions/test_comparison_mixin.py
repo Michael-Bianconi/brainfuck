@@ -9,13 +9,14 @@ class TestComparisonMixin(TestAssembler):
 
         def source(case):
             return f"""
+                PUSH @top 1
                 PUSH @top {case[0]}
                 PUSH @top {case[1]}
                 LAND @top @top @top
             """
 
         def check(case):
-            self.assertStackContents([(case[0] > 0 and case[1] > 0)], 1)
+            self.assertStackContents([1, (case[0] > 0 and case[1] > 0)], 2)
 
         self.run_and_check(cases, source, check)
 

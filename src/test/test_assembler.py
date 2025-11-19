@@ -181,7 +181,8 @@ class TestAssembler(TestCase):
         for case in cases:
             with self.subTest(values=case):
                 self.setUp()
-                self.interpreter.run(self.assembler.assemble(source(case)))
+                exe = self.assembler.assemble(source(case))
+                self.interpreter.run(exe)
                 check(case)
     #
     #

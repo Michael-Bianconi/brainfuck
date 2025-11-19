@@ -33,8 +33,8 @@ class TestMemoryMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
-    def test_push_top8_address8(self):
-        cases = [(0, 0, 0), (1, 0, 0), (5, 5, 5), (255, 0, 0), (0, 0, 255), (255, 255, 255)]
+    def test_push_8_top_address(self):
+        cases = [(0, 0, 0), (1, 0, 0), (5, 5, 5), (255, 0, 0), (0, 0, 255), (255, 255, 255), (1, 2, 3)]
 
         def source(case):
             self.assembler.vtable["a"] = 1
@@ -80,7 +80,7 @@ class TestMemoryMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
-    def test_push_direct8_immediate(self):
+    def test_push_8_address_immediate(self):
         cases = [0, 1, 5, 254, 255, 256, 3000]
 
         def source(case):
@@ -176,7 +176,7 @@ class TestMemoryMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
-    def test_popv_direct8_top8(self):
+    def test_popv_8_address_top(self):
         cases = [0, 1, 2, 255, 3000, 65535]
 
         def source(case):

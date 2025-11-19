@@ -102,7 +102,6 @@ class MemoryMixin(AssemblerMixin):
 
     def push_8_address_immediate(self, address, immediate):
         offset = self.stack_pointer - address
-        self.stack_pointer += 1
         return self.assemble(f"""
              _LFT {offset}
              _SET 0
@@ -112,7 +111,6 @@ class MemoryMixin(AssemblerMixin):
 
     def push_16_address_immediate(self, address, immediate):
         offset = self.stack_pointer - address
-        self.stack_pointer += 4
         return self.assemble(f"""
              _LFT {offset}
              _SET:16 0

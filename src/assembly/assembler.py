@@ -1,27 +1,40 @@
 from src.assembly.instructions.arithmetic_mixin import ArithmeticMixin
 from src.assembly.instructions.comparison_mixin import ComparisonMixin
+from src.assembly.instructions.control_mixin import ControlMixin
 from src.assembly.instructions.internal_mixin import InternalMixin
 from src.assembly.instructions.memory_mixin import MemoryMixin
 from src.assembly.parser import Parser
 
 
-class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin):
+class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin, ControlMixin):
 
     def __init__(self):
         self.vtable = {}
         self.stack_pointer = 0
         self.instructions = {}
+        self.defining_func = None
         self.instructions.update(self.internal_definitions())
         self.instructions.update(self.arithmetic_definitions())
         self.instructions.update(self.comparison_definitions())
         self.instructions.update(self.memory_definitions())
+        self.instructions.update(self.control_definitions())
 
     def assemble(self, source):
         parser = Parser()
         result = ""
-        for _ in parser.parse(source):
-            instruction = self.instructions[(parser.mnemonic(), tuple([o.value_type for o in parser.operands()]))]
-            result += instruction(*[o.resolve(self.vtable) for o in parser.operands()])
+        for line in source.splitlines():
+            if line.strip() == '':
+                continue
+            parser.parse(line).__next__()
+            print(f"{self.stack_pointer} {line}")
+            if parser.mnemonic() == 'RTRN':
+                self.defining_func = None
+            elif self.defining_func is not None:
+                self.vtable[self.defining_func] += line + '\n'
+            else:
+                instruction = self.instructions[(parser.mnemonic(), tuple([o.value_type for o in parser.operands()]))]
+                exe = instruction(*[o.resolve(self.vtable) for o in parser.operands()])
+                result += exe
         return result
 
 

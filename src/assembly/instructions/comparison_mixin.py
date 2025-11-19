@@ -53,25 +53,26 @@ class ComparisonMixin(AssemblerMixin):
         x2 = self.stack_pointer - 7
         y1 = self.stack_pointer - 4
         y2 = self.stack_pointer - 3
-        source = f"""
-            PUSH @top @{x1}
-            PUSH @top @{y1}
-            EQLS @top @top @top
-            #PUSH @top @{x2}
-            #PUSH @top @{y2}
-            #EQLS @top @top @top
-            #LAND @top @top @top
-            #_RAW <<<<[-]<[-]<<<[-]<[-]>>>>>>>>
-            #_RAW [<<<<<<<<+>>>>>>>>-]<<<<<<
-        """
-        #self.stack_pointer -= 7
+        source = self.assemble(f"""               # [x1 x2 0 0 y1 y2 0 0 | 0]           [x1 x2 0 0 x1 x2 0 0 | 0]   
+            PUSH @top @{x1}                       # [x1 x2 0 0 y1 y2 0 0 x1 | 0]        [x1 x2 0 0 x1 x2 0 0 x1 | 0]
+            PUSH @top @{y1}                       # [x1 x2 0 0 y1 y2 0 0 x1 y1 | 0]     [x1 x2 0 0 x1 x2 0 0 x1 x1 | 0]
+            EQLS @top @top @top                   # [x1 x2 0 0 y1 y2 0 0 0 | 0]         [x1 x2 0 0 x1 x2 0 0 1 | 0]
+            PUSH @top @{x2}                       # [x1 x2 0 0 y1 y2 0 0 0 x2 | 0]      [x1 x2 0 0 x1 x2 0 0 1 x2 | 0]
+            PUSH @top @{y2}                       # [x1 x2 0 0 y1 y2 0 0 0 x2 y2 | 0]   [x1 x2 0 0 x1 x2 0 0 1 x2 x2 | 0]
+            EQLS @top @top @top                   # [x1 x2 0 0 y1 y2 0 0 0 0 | 0]       [x1 x2 0 0 x1 x2 0 0 1 1 | 0]
+            LAND @top @top @top                   # [x1 x2 0 0 y1 y2 0 0 0 | 0]         [x1 x2 0 0 x1 x2 0 0 1 | 0]
+            _RAW <<<<[-]<[-]<<<[-]<[-]>>>>>>>>    # [0 0 0 0 0 0 0 0 | x=y ]
+            _RAW [<<<<<<<<+>>>>>>>>-]<<<<<<<      # [x=y | 0]
+        """)
+        self.stack_pointer -= 8
         return source
 
     def eqls_8_top_top_immediate(self, top1, top2, immediate):
         if immediate == 0:
-            return ''.join([        # [0 | 0 0]     [n | 0 0]
-                '+<[>-]>',          # [0 | 1 0]     [n 0 | 0]
-                '[<+>->]<<'         # [| 1 0 0]     [| 0 0 0]
-            ])
+            return f"""             # [0 | 0 0]     [n | 0 0]
+                _RAW +<[>-]>        # [0 | 1 0]     [n 0 | 0]
+                _RAW [<+>->]<<      # [| 1 0 0]     [| 0 0 0]
+            """
+
         else:
             raise NotImplementedError()
