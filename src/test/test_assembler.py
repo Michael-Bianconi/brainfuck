@@ -139,17 +139,40 @@ class TestAssembler(TestCase):
     #
     #     self.run_and_check(cases, source, check)
     #
-    # def test_fibonacci(self):
-    #
-    #     cases = [0, 1, 2, 5, 9]
-    #
-    #     def source(case):
-    #         return ''.join([
-    #             self.assembler.load(case),
-    #             self.assembler.if_nonzero()
-    #
-    #         ])
-    #
+    def test_fibonacci(self):
+
+        cases = [0, 1, 2, 5, 9]
+
+        def source(case):
+            return f"""
+                ALOC left 1
+                ALOC right 1
+                ALOC stage 1
+                FUNC next
+                    PUSH @top @left
+                    PUSH @top @right
+                    PUSH @top @left
+                    PLUS @top @top @top
+                    POPV @right @top
+                    POPV @left @top
+                    PLUS @stage @stage 1
+                    PUSH {case}
+                    EQLS @top @top @top
+                    RTRN
+                PUSH @left 0
+                PUSH @right 1
+                PUSH @top @stage
+                PUSH @top {case}
+                EQLS @top @top @top
+                _RAW <[>
+                    CINZ @top next
+                _RAW <]>
+                POPV @top        
+            """
+
+        def check(case):
+            self.assertStackContents([])
+
     def assertStackContents(self, expected_content, expected_pointer):
         """
 
@@ -171,11 +194,23 @@ class TestAssembler(TestCase):
         return [lo, hi, 0, 0]
 
     def dump_interpreter(self):
-        result = '\n'
-        result += ' '.join([str(x) for x in self.interpreter.memory[:self.assembler.stack_pointer + 10]])
-        result += '\n'
-        result += ' '.join(['s' if i == self.assembler.stack_pointer else 'd' if i == self.interpreter.dptr else ' ' for i in range(self.assembler.stack_pointer + 10)])
-        return result
+        memory = ''
+        pointers = ''
+        for i in range(self.assembler.stack_pointer + 10):
+            cell = str(self.interpreter.memory[i])
+            memory += cell + ' '
+            pointers += 's' if i == self.assembler.stack_pointer else 'd' if i == self.interpreter.dptr else ' '
+            pointers += ' ' * len(cell)
+
+        return '\n' + memory + '\n' + pointers
+
+    def cases_immediate8(self):
+        return [0, 1, 5, 255]
+
+    def cases_immediate8_immediate8(self):
+        return [
+            [0, 0], [0, 1], [1, 0], [1, 1], [5, 10], [255, 0], [0, 255], [255, 255]
+        ]
 
     def run_and_check(self, cases, source, check):
         for case in cases:
@@ -184,5 +219,3 @@ class TestAssembler(TestCase):
                 exe = self.assembler.assemble(source(case))
                 self.interpreter.run(exe)
                 check(case)
-    #
-    #

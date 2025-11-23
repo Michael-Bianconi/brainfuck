@@ -6,13 +6,23 @@ class ControlMixin(AssemblerMixin):
     def control_definitions(self):
         return {
             ("CALL", ("Symbol",)): self.call,
+            ("CINZ", ("Top", "Symbol")): self.cinz_8_top_symbol,
             ("FUNC", ("Symbol",)): self.func,
             ("RTRN", ()): self.rtrn,
+            ("CWNZ", ("Top", "Symbol")): self.cwnz8_top_symbol
         }
 
     def call(self, symbol):
-        print(self.stack_pointer)
         return self.assemble(self.vtable[symbol])
+
+    def cinz_8_top_symbol(self, top, symbol):
+        source = self.assemble(f"""
+            _RAW <[>
+            CALL {symbol}
+            _RAW <[-]]
+        """)
+        self.stack_pointer -= 1
+        return source
 
     def func(self, symbol):
         if self.defining_func is not None:
@@ -26,3 +36,12 @@ class ControlMixin(AssemblerMixin):
 
     def rtrn(self):
         return ""
+
+    def cwnz8_top_symbol(self, top ,symbol):
+        source = self.assemble(f"""
+            _RAW <[>
+            CALL {symbol}
+            _RAW <]
+        """)
+        self.stack_pointer -= 1
+        return source

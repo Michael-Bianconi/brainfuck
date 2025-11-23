@@ -60,14 +60,14 @@ class MemoryMixin(AssemblerMixin):
         self.stack_pointer += 1
         return self.assemble(f"""
              _ADD {immediate}
-             _RIT 1
+             _MDR 1
          """)
 
     def push_16_top_immediate(self, top, immediate):
         self.stack_pointer += 4
         return self.assemble(f"""
              _ADD:16 {immediate}
-             _RIT:16 1
+             _MDR:16 1
          """)
 
     def push_8_8_top_address(self, top, address):
@@ -77,18 +77,18 @@ class MemoryMixin(AssemblerMixin):
              _LFT {offset}
              _JFZ
                  _SUB 1
-                 _RIT {offset}
+                 _MDR {offset}
                  _ADD 1
-                 _RIT 1
+                 _MDR 1
                  _ADD 1
                  _LFT {offset + 1}
              _JBN
-             _RIT {offset + 1}
+             _MDR {offset + 1}
              _JFZ
                  _SUB 1
                  _LFT {offset + 1}
                  _ADD 1
-                 _RIT {offset + 1}
+                 _MDR {offset + 1}
              _JBN
          """)
 
@@ -106,7 +106,7 @@ class MemoryMixin(AssemblerMixin):
              _LFT {offset}
              _SET 0
              _ADD {immediate}
-             _RIT {offset}
+             _MDR {offset}
          """)
 
     def push_16_address_immediate(self, address, immediate):
@@ -115,7 +115,7 @@ class MemoryMixin(AssemblerMixin):
              _LFT {offset}
              _SET:16 0
              _ADD:16 {immediate}
-             _RIT {offset}
+             _MDR {offset}
          """)
 
     def geti_8_8_top_top(self, top1, top2):
@@ -178,7 +178,7 @@ class MemoryMixin(AssemblerMixin):
             _JFZ                # While top value is nonzero
                 _LFT {offset}   #   Move to dest
                 _ADD 1          #   Add 1
-                _RIT {offset}   #   Move to top
+                _MDR {offset}   #   Move to top
                 _SUB 1          #   Sub 1
             _JBN                # Repeat until top is zero
         """)

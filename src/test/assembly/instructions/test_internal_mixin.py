@@ -3,7 +3,7 @@ from src.test.test_assembler import TestAssembler
 
 class TestInternalMixin(TestAssembler):
 
-    def test_rit(self):
+    def test_MDR(self):
         values = (0, 1, 2, 5, 255, 256, 1000)
         bitwidths = (8, 16)
         cases = []
@@ -12,7 +12,7 @@ class TestInternalMixin(TestAssembler):
                 cases.append((value, bitwidth))
 
         def source(case):
-            return f"_RIT:{case[1]} {case[0]}"
+            return f"_MDR:{case[1]} {case[0]}"
 
         def check(case):
             self.assertEqual(case[0] * (1 if case[1] == 8 else 4), self.interpreter.dptr)
@@ -30,7 +30,7 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _RIT 1000
+                _MDR 1000
                 _LFT:{case[1]} {case[0]}
             """
 

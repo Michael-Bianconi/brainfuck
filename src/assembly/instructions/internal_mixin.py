@@ -6,18 +6,21 @@ class InternalMixin(AssemblerMixin):
     def internal_definitions(self):
         return {
             ("_RAW", ("Raw",)): self.raw,
-            ("_RIT", ("Immediate",)): self.rit_8,
-            ("_RIT:16", ("Immediate",)): self.rit_16,
+            ("_MDR", ("Immediate",)): self.rit_8,
             ("_LFT", ("Immediate",)): self.lft_8,
-            ("_LFT:16", ("Immediate",)): self.lft_16,
+            ("_MOV", ("Immediate",)): self.mov_8,
             ("_ADD", ("Immediate",)): self.add_8,
-            ("_ADD:16", ("Immediate",)): self.add_16,
             ("_SUB", ("Immediate",)): self.sub_8,
-            ("_SUB:16", ("Immediate",)): self.sub_16,
             ("_SET", ("Immediate",)): self.setcell_8,
-            ("_SET:16", ("Immediate",)): self.setcell_16,
             ("_JFZ", ()): self.jfiz,
-            ("_JBN", ()): self.jbnz
+            ("_JBN", ()): self.jbnz,
+
+            ("_ADD:16", ("Immediate",)): self.add_16,
+            ("_LFT:16", ("Immediate",)): self.lft_16,
+            ("_MOV:16", ("Immediate",)): self.mov_16,
+            ("_MDR:16", ("Immediate",)): self.rit_16,
+            ("_SET:16", ("Immediate",)): self.setcell_16,
+            ("_SUB:16", ("Immediate",)): self.sub_16,
         }
 
     def rit_8(self, immediate):
@@ -26,7 +29,7 @@ class InternalMixin(AssemblerMixin):
         :param i: The immediate value to move by.
         :return:
         """
-        return '>' * immediate
+        return '>' * immediate if immediate >= 0 else self.lft_8(-immediate)
 
     def rit_16(self, immediate):
         """
@@ -38,7 +41,20 @@ class InternalMixin(AssemblerMixin):
         return '>>>>' * immediate
 
     def lft_8(self, immediate):
-        return '<' * immediate
+        return '<' * immediate if immediate >= 0 else self.rit_8(-immediate)
+
+    def mov_8(self, immediate):
+        return f'[{self.rit_8(immediate)}+{self.lft_8(immediate)}-]'
+
+    def mov_16(self, immediate):
+        return f"""
+            _JFZ
+                _MDR:16 {immediate}
+                _ADD:16 1
+                _LFT:16 {immediate}
+                _SUB:16 1
+            _JBN
+        """
 
     def lft_16(self, immediate):
         return '<<<<' * immediate
@@ -78,7 +94,7 @@ class InternalMixin(AssemblerMixin):
         # block by the full value of i.
         if high_add > 0:
             result += self.assemble(f"""
-                _RIT 1
+                _MDR 1
                 _ADD {high_add}
                 _LFT 1
             """)
@@ -107,9 +123,9 @@ class InternalMixin(AssemblerMixin):
         # block by the full value of i.
         if high_sub > 0:
             result += self.assemble(f"""
-            _RIT 1
-            _SUB {high_sub}
-            _LFT 1
+                _MDR 1
+                _SUB {high_sub}
+                _LFT 1
             """)
         result += ''.join([  # If x == 0         |   If x != 0           d=x
             '[>>+>+<<<-]>>',  # [0, y, x, x]      |   [x, y, 0, 0]        d=c

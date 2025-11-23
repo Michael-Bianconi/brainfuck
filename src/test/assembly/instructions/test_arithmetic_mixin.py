@@ -3,10 +3,26 @@ from src.test.test_assembler import TestAssembler
 
 class TestArithmeticMixin(TestAssembler):
 
+    def test_divi8_top_top_top(self):
+        cases = [[10, 2], [1, 40], [1, 1], [1, 5], [1, 255], [5, 5],
+                 [30, 3], [30, 30], [255, 1], [255, 255]]
+        cases.extend([c[::-1] for c in cases if c[0] != c[1]])
+
+        def source(case):
+            return f"""
+                PUSH @top {case[0]}
+                PUSH @top {case[1]}
+                DIVI @top @top @top
+            """
+
+        def check(case):
+            self.assertStackContents([case[0] // case[1]], 1)
+
+        self.run_and_check(cases, source, check)
+
     def test_plus_top8_top8_top8(self):
-        cases = [
-            (0, 0), (0, 1), (5, 5), (2, 253), (1, 255)
-        ]
+
+        cases = self.cases_immediate8_immediate8()
 
         def source(case):
             return f"""
@@ -21,9 +37,8 @@ class TestArithmeticMixin(TestAssembler):
         self.run_and_check(cases, source, check)
 
     def test_plus_top8_immediate8_top8(self):
-        cases = [
-            (0, 0), (0, 1), (5, 5), (2, 253), (1, 255)
-        ]
+
+        cases = self.cases_immediate8_immediate8()
 
         def source(case):
             return f"""
@@ -49,6 +64,23 @@ class TestArithmeticMixin(TestAssembler):
 
         def check(case):
             self.assertStackContents([(case[0] + case[1]) % 256], 1)
+
+        self.run_and_check(cases, source, check)
+
+    def test_plus8_address_address_immediate(self):
+        cases = self.cases_immediate8()
+
+        def source(case):
+            return f"""
+                ALOC a 1
+                ALOC b 1
+                PUSH @a 5
+                PUSH @b 10
+                PLUS @a @b {case}
+            """
+
+        def check(case):
+            self.assertStackContents([(10 + case) % 256, 10], 2)
 
         self.run_and_check(cases, source, check)
 
@@ -101,5 +133,22 @@ class TestArithmeticMixin(TestAssembler):
 
         def check(case):
             self.assertStackContents([(case[0] * case[1]) % 256], 1)
+
+        self.run_and_check(cases, source, check)
+
+    def test_mods8_top_top_immediate(self):
+        cases = [[10, 2], [1, 40], [1, 1], [1, 5], [1, 255], [5, 5],
+                 [30, 3], [30, 30], [255, 1], [255, 255], [5, 2]]
+        cases.extend([c[::-1] for c in cases if c[0] != c[1]])
+
+        def source(case):
+            return f"""
+                PUSH @top 10
+                PUSH @top {case[0]}
+                MODS @top @top {case[1]}
+            """
+
+        def check(case):
+            self.assertStackContents([10, case[0] % case[1]], 2)
 
         self.run_and_check(cases, source, check)
