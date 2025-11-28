@@ -72,7 +72,7 @@ class Parser:
             .set_parse_action(lambda orig, loc, result: Operand(result, "Immediate"))
         address_of = pp.Combine(pp.Literal("&") + ~pp.Keyword("top") + pp.Word(pp.alphas)) \
             .set_parse_action(lambda orig, loc, result: Operand(result, "Immediate"))
-        symbol = pp.Combine(~pp.Keyword("top") + pp.Word(pp.alphas)) \
+        symbol = pp.Combine(~pp.Keyword("top") + pp.common.identifier) \
             .set_parse_action(lambda orig, loc, result: Operand(result, "Symbol"))
         top = pp.Combine(pp.Suppress("@") + pp.Keyword("top"))("Top") \
             .set_parse_action(lambda orig, loc, result: Operand(result, "Top"))

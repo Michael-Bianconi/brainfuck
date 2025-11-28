@@ -122,7 +122,7 @@ class ArithmeticMixin(AssemblerMixin):
 
     def subt_8_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 1
-        return '_RAW <[<->-]'
+        return '<[<->-]'
 
     def subt_16_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 4

@@ -30,7 +30,6 @@ class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin, Co
             parser.parse(line)
             if len(parser.lines) > 0:
                 parser.__next__()
-                print(f"{self.stack_pointer} {line}")
                 if parser.mnemonic() == 'RTRN':
                     self.defining_func = None
                 elif self.defining_func is not None:
@@ -40,43 +39,11 @@ class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin, Co
                     operands = [o.resolve(self.vtable) for o in parser.operands()]
                     operand_types = tuple([o.value_type for o in parser.operands()])
                     instruction = self.instructions[(mnemonic, operand_types)]
-                    result += instruction(*operands)
+                    exe = instruction(*operands)
+                    if '_' not in mnemonic:
+                        print(f"{self.stack_pointer} {line.strip()} {exe}")
+                    result += exe
         return result
-
-
-    def logical_not(self):
-        """
-        Pops the top value from the stack. If it is non-zero, pushes 0. If it is 0, pushes 1.
-        :return:
-        """
-        return ''.join([        # [x, 0]
-            self.load(0),       # [x, 0, 0]
-            self.equals()       # If zero, [1, 0]. If nonzero, [0, 0]
-        ])
-
-    def less_than(self, bitwidth=8):
-        """
-        Pops the a and b off the stack. If a > b, pushes 1 onto the stack. Otherwise
-        pushes 0.
-
-        2 3 0
-
-        :return:
-        """
-        if bitwidth == 8:
-            self.stack_pointer -= 1     # a < b            a > b
-            return ''.join([            # a b | 0 0        a b | 0 0
-                self.swap(),
-                '<<'                # Move to a
-                '['                 # While a is nonzero
-                '  >>+<'            # Set t1 to 1 and move to b
-                '  [>[-]>+<<-]'     # If b is nonzero, set t1 to 0 and move b to t2. Move to b.
-                '  >>[<<+>>-]<'     # Move t2 back into b. Move to t1
-                '  [>>+<<-]<'       # Move t1 to t3. Move to b
-                '-<-]'              # b-- a-- Move to a
-                '>[-]>[-]>[-]>'     # b=0 t1=0 t2=0 Move to t3
-                '[<<<<+>>>>-]<<<'   # Move t3 into a. Move to b.
-            ])
 
 
     ###########################################################################

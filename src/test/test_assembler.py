@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from src.assembly.assembler import Assembler
-from src.interpreter import Interpreter
+from src.interpreter.interpreter import Interpreter
 
 
 class TestAssembler(TestCase):
@@ -10,19 +10,7 @@ class TestAssembler(TestCase):
         self.assembler = Assembler()
         self.interpreter = Interpreter()
 
-    # def test_logical_not(self):
-    #     cases = [0, 1, 2, 5, 255]
-    #
-    #     def source(case, offset=0):
-    #         return ''.join([
-    #                 self.assembler.load(case),
-    #                 self.assembler.logical_not()
-    #         ])
-    #
-    #     def check(case, offset=0):
-    #         self.assertStackContents([0 if case > 0 else 1], 1+offset)
-    #
-    #     self.run_and_check(cases, source, check)
+
     #
     #
     #
@@ -107,38 +95,6 @@ class TestAssembler(TestCase):
     #
     #     self.run_and_check(cases, source, check)
     #
-    # def test_less_than(self):
-    #     cases = [[0, 0], [0, 1], [1, 1], [1, 5], [5, 255], [255, 255]]
-    #     cases.extend([c[::-1] for c in cases if c[0] != c[1]])
-    #
-    #     def source(case, offset):
-    #         return ''.join([
-    #             self.assembler.load(case[0]),
-    #             self.assembler.load(case[1]),
-    #             self.assembler.less_than(),
-    #         ])
-    #
-    #     def check(case, offset):
-    #         self.assertStackContents([1 if case[0] < case[1] else 0], 1+offset)
-    #
-    #     self.run_and_check(cases, source, check)
-    #
-    # def test_greater_than(self):
-    #     cases = [[0, 0], [0, 1], [1, 1], [1, 5], [5, 255], [255, 255]]
-    #     cases.extend([c[::-1] for c in cases if c[0] != c[1]])
-    #
-    #     def source(case, offset):
-    #         return ''.join([
-    #             self.assembler.load(case[0]),
-    #             self.assembler.load(case[1]),
-    #             self.assembler.greater_than(),
-    #         ])
-    #
-    #     def check(case, offset):
-    #         self.assertStackContents([1 if case[0] > case[1] else 0], 1+offset)
-    #
-    #     self.run_and_check(cases, source, check)
-    #
     def test_fibonacci(self):
 
         cases = [0, 1, 2, 5, 9]
@@ -205,7 +161,7 @@ class TestAssembler(TestCase):
         return '\n' + memory + '\n' + pointers
 
     def cases_immediate8(self):
-        return [0, 1, 5, 255]
+        return [0, 1, 5, 10, 25, 255]
 
     def cases_immediate8_immediate8(self):
         return [

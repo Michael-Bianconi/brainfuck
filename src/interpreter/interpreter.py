@@ -1,4 +1,6 @@
 import sys
+
+
 class Interpreter:
 
     def __init__(self, memsize=30000):
@@ -6,7 +8,10 @@ class Interpreter:
         self.memory = [0 for _ in range(memsize)]
         self.dptr = 0
         self.iptr = 0
+        self.openbrackets = {}
+        self.closebrackets = {}
         self.cycles = 0
+
 
     def run(self, source):
         self.source = source

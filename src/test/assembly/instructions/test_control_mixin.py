@@ -47,6 +47,7 @@ class TestControlMixin(TestAssembler):
     def test_cwnz(self):
 
         cases = self.cases_immediate8()
+
         def source(case):
             return f"""
                 ALOC a 1
@@ -61,6 +62,6 @@ class TestControlMixin(TestAssembler):
             """
 
         def check(case):
-            self.assertStackContents([(5 * case) % 255, 10], 2)
+            self.assertStackContents([(5 * case) % 256, 10], 2)
 
         self.run_and_check(cases, source, check)

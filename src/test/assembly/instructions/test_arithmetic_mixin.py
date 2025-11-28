@@ -77,10 +77,11 @@ class TestArithmeticMixin(TestAssembler):
                 PUSH @a 5
                 PUSH @b 10
                 PLUS @a @b {case}
+                PLUS @a @a {case}
             """
 
         def check(case):
-            self.assertStackContents([(10 + case) % 256, 10], 2)
+            self.assertStackContents([(10 + (case * 2)) % 256, 10], 2)
 
         self.run_and_check(cases, source, check)
 
