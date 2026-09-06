@@ -26,12 +26,13 @@ class ArithmeticMixin(AssemblerMixin):
             ("PLUS", ("Address", "Address", "Immediate")): self.plus_8_address_address_immediate,
 
             ("PLUS:16", ("Top", "Top", "Top")): self.plus_16_top_top_top,
+            ("PLUS:16", ("Top", "Top", "Immediate")): self.plus_16_top_top_immediate,
         }
 
     def divi8_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 1
         return self.assemble(f"""
-            _RAW <<[->[->+>>]>[<<+>>[-<+>]>+>>]<<<<<]>[>>>]>[[-<+>]>+>>]<<[<<<+>>>-]<[-]<[-]
+            _RAW "<<[->[->+>>]>[<<+>>[-<+>]>+>>]<<<<<]>[>>>]>[[-<+>]>+>>]<<[<<<+>>>-]<[-]<[-]"      
         """)
 
     def divi8_top_top_immediate(self, top1, top2, immediate):
@@ -43,7 +44,7 @@ class ArithmeticMixin(AssemblerMixin):
     def plus_8_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 1
         return self.assemble(f"""
-            _LFT 1
+            _MDL 1
             _MOV -1
         """)
 
@@ -72,20 +73,48 @@ class ArithmeticMixin(AssemblerMixin):
         """)
 
     def plus_16_top_top_top(self, top1, top2, top3):
-        self.stack_pointer -= 4
+        """
+        PLUS:16 @TOP @TOP @TOP
+
+        Pops the top two 16-bit values off the stack, adds them together,
+        and places the sum back on the stack.
+
+        :param top1:
+        :param top2:
+        :param top3:
+        :return:
+        """
+        self.stack_pointer -= 2
         return self.assemble(f"""
-            _LFT:16 1
-            _RAW >[<
-                _LFT:16 1
+            _MDL 2
+            _MOV:16 2
+            _MDR 3
+            _JFZ
+                _MDL 5
                 _ADD:16 256
-                _MDR:16 1
+                _MDR 4
                 _SUB:16 256
-            _RAW >]<[
-                _LFT:16 1
+                _MDR 1
+            _JBN
+            _MDL 1
+            _JFZ      
+                _MDL:8 4
                 _ADD:16 1
-                _MDR:16 1
+                _MDR:8 4
                 _SUB:16 1
-            _RAW ]
+            _JBN
+            _MDL 2   
+        """)
+
+    def plus_16_top_top_immediate(self, top1, top2, immediate):
+        """
+        PLUS:16 @TOP @TOP IMM
+
+        Adds an immediate value to the value at the top of the stack.
+        """
+        return self.assemble(f"""
+            PUSH:16 @top {immediate}
+            PLUS:16 @top @top @top
         """)
 
     def plus_8_address_address_immediate(self, address1, address2, immediate):
@@ -114,29 +143,57 @@ class ArithmeticMixin(AssemblerMixin):
 
     def mods_8_top_top_immediate(self, top1, top2, immediate):
         return self.assemble(f"""
-            _RAW <[>+<-]>>                  # [0 | a 0]
-            _ADD {immediate}                # [0 a | b]
-            _RAW <[>->+<[>]>[<+>-]<<[<]>-]  # [0 | a b]
-            _RAW >[-]>[<<<+>>>-]>[-]<<<
+            _RAW "<[>+<-]>>"                    # [0 | a 0]
+            _ADD {immediate}                    # [0 a | b]
+            _RAW "<[>->+<[>]>[<+>-]<<[<]>-]"    # [0 | a b]
+            _RAW ">[-]>[<<<+>>>-]>[-]<<<"       
         """)
 
     def subt_8_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 1
         return '<[<->-]'
 
-    def subt_16_top_top_top(self, top1, top2, top3):
-        self.stack_pointer -= 4
+    def subt_8_top_imm_top(self, top1, imm, top2):
+        """
+        SUBT:8 @TOP IMM @TOP (SUBTRACT 8-BIT)
+
+        Pop the top value off the stack. Subtract it from the immediate value.
+        Push the result onto the stack.
+        """
         return self.assemble(f"""
-            _LFT:16 1
-            _RAW >[<
-                _LFT:16 1
-                _SUB:16 256
-                _MDR:16 1
-                _SUB:16 256
-            _RAW >]<[
-                _LFT:16 1
-                _SUB:16 1
-                _MDR:16 1
-                _SUB:16 1
-            _RAW ]
+            PUSH @top {imm}
+            SWAP @top @top
+            SUBT @top @top @top
         """)
+
+    def subt_16_top_top_top(self, top1, top2, top3):
+        """
+        SUBT @TOP @TOP @TOP (SUBTRACT 16-BIT)
+
+        Pops the top two values off the stack.
+        Subtracts the top value on the stack from the preceding value.
+        Stores the result on the stack
+        """
+        self.stack_pointer -= 2
+        return self.assemble(f"""
+            _MDL 2
+            _MOV:16 2
+            _MDR 3
+            _JFZ
+                _MDL 5
+                _SUB:16 256
+                _MDR 4
+                _SUB:16 256
+                _MDR 1
+            _JBN
+            _MDL 1
+            _JFZ      
+                _MDL:8 4
+                _SUB:16 1
+                _MDR:8 4
+                _SUB:16 1
+            _JBN
+            _MDL 2    
+        """)
+
+

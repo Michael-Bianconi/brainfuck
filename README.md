@@ -191,3 +191,9 @@ MOVE -$0
 
 Navigates to memory cell n and prints the contents of the next m cells.
 
+# PROBLEM STATEMENT
+
+Create a program that compiles BFASM source code into Brainfuck source code.
+
+Consider the following BFASM program:
+

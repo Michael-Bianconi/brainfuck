@@ -1,5 +1,5 @@
 import pyparsing as pp
-from pyparsing import ParserElement, ParseResults
+from pyparsing import ParserElement, dbl_quoted_string
 
 
 class Operand:
@@ -23,8 +23,8 @@ class Operand:
     """
 
     def __init__(self, parse_result, value_type):
-        if value_type == "Raw":
-            self._value = ''.join(parse_result['Raw'].as_list())
+        if value_type == "String":
+            self._value = ''.join(parse_result['String'])[1:-1]
         else:
             self._value = parse_result[0]
         self._value_type = value_type
@@ -78,10 +78,9 @@ class Parser:
             .set_parse_action(lambda orig, loc, result: Operand(result, "Top"))
         address = pp.Combine(pp.Suppress("@") + (immediate ^ symbol)) \
             .set_parse_action(lambda orig, loc, result: Operand(result, "Address"))
-        raw = pp.Word("+-><[],.")[1,...]("Raw") \
-            .leave_whitespace(False) \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Raw"))
-        operands = pp.ZeroOrMore(pp.Group(raw ^ immediate ^ symbol ^ address ^ address_of ^ top)) \
+        string = dbl_quoted_string("String") \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "String"))
+        operands = pp.ZeroOrMore(pp.Group(string ^ immediate ^ symbol ^ address ^ address_of ^ top)) \
             .set_results_name("Operands")
         mnemonic = pp.Combine(pp.Word(pp.alphas + "_", exact=4) +
                               pp.ZeroOrMore(pp.Combine(pp.Literal(":") + pp.Word(pp.nums))))("Mnemonic")
@@ -124,9 +123,6 @@ class Parser:
 
     def dump(self):
         return self._current.dump()
-
-    def _combine_raw(self, original, location, parse_results):
-        return parse_results
 
     def __iter__(self):
         return self

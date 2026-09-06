@@ -44,6 +44,57 @@ class TestControlMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
+    def test_ifnz_else_znfi(self):
+
+        cases = self.cases_immediate8()
+
+        def source(case):
+            return f"""
+                ALOC a 1
+                PUSH @a {case}
+                PUSH @top @a
+                IFNZ @top
+                    PUSH @a 10
+                ELSE
+                    PUSH @a 7
+                ZNFI
+                
+            """
+
+        def check(case):
+            self.assertStackContents([10 if case > 0 else 7, case], 2)
+
+        self.run_and_check(cases, source, check)
+
+    def test_ifnz_elif_znfi(self):
+        cases = self.cases_immediate8()
+
+        def source(case):
+            return f"""
+                ALOC a 1
+                PUSH @a {case}
+                PUSH @top @a
+                EQLS @top @top 5
+                IFNZ @top
+                    PUSH @a 10
+                ELSE
+                    POPV @top
+                    PUSH @top @a
+                    EQLS @top @top 1
+                    IFNZ @top
+                        PUSH @a 7
+                    ELSE
+                        PUSH @a 3
+                    ZNFI
+                ZNFI
+                POPV @top
+            """
+
+        def check(case):
+            self.assertStackContents([10 if case == 5 else 7 if case == 1 else 3], 1)
+
+        self.run_and_check(cases, source, check)
+
     def test_cwnz(self):
 
         cases = self.cases_immediate8()
@@ -63,5 +114,26 @@ class TestControlMixin(TestAssembler):
 
         def check(case):
             self.assertStackContents([(5 * case) % 256, 10], 2)
+
+        self.run_and_check(cases, source, check)
+
+    def test_whil_lihw(self):
+
+        cases = self.cases_immediate8()
+
+        def source(case):
+            return f"""
+                ALOC a 1
+                PUSH @a 10
+                PUSH @top {case}
+                WHIL @top
+                    PLUS @a @a 1
+                    PUSH @top 1
+                    SUBT @top @top @top
+                LIHW
+            """
+
+        def check(case):
+            self.assertStackContents([(10 + case) % 256, 0], 2)
 
         self.run_and_check(cases, source, check)

@@ -75,7 +75,7 @@ class TestParser(TestCase):
         self.assertEqual(2, len(self.parser.operands()))
 
     def test_raw(self):
-        source = "_RAW >>+"
+        source = '_RAW ">>+"'
         self.parser.parse(source).__next__()
         self.assertEqual("_RAW", self.parser.mnemonic())
         self.assertEqual(1, self.parser.operand_count())

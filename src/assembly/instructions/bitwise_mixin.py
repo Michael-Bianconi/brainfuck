@@ -190,7 +190,8 @@ class BitwiseMixin(AssemblerMixin):
 
     def rsft8_top_top_immediate(self, top1, top2, immediate):
         if immediate >= 8:
-            return self.assemble("_RAW <[-]>")
+            return self.assemble('_RAW "<[-]>"')
+
         return self.assemble(f"DIVI @top @top {(2 ** immediate) % 256}")
 
     def lsft8_top_top_immediate(self, top1, top2, immediate):

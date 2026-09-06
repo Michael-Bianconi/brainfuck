@@ -118,4 +118,15 @@ class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin, Co
         self.stack_pointer += n
         return ',>' * n
 
+    def store_instruction(self, mnemonic, operand_types, operands):
+        result = ''
+        opcode = list(self.instructions.keys()).index((mnemonic, operand_types))
+        result += self.assemble(f"PUSH @top {opcode}")
+        for operand_type, operand in zip(operand_types, operands):
+            if operand_type in ("Immediate", "Address"):
+                result += self.assemble(f"PUSH @top {operand}")
+            elif operand_type == "String":
+                result += self.assemble(f"PUSH @top")
+
+
 

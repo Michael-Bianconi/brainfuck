@@ -1,0 +1,3 @@
+[submodule "bfgcc"]
+	path = bfgcc
+	url = https://github.com/Michael-Bianconi/bfgcc.git

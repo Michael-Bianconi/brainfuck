@@ -12,7 +12,12 @@ class ControlMixin(AssemblerMixin):
             ("CINZ", ("Top",)): self.cinz8_top,
             ("FUNC", ("Symbol",)): self.func,
             ("RTRN", ()): self.rtrn,
-            ("CWNZ", ("Top", "Symbol")): self.cwnz8_top_symbol
+            ("CWNZ", ("Top", "Symbol")): self.cwnz8_top_symbol,
+            ("IFNZ", ("Top",)): self.ifnz_top,
+            ("ELSE", ()): self._else,
+            ("WHIL", ("Top",)): self.whil_top,
+            ("LIHW", ()): self.lihw,
+            ("ZNFI", ()): self.znfi
         }
 
     def call(self, symbol):
@@ -26,9 +31,9 @@ class ControlMixin(AssemblerMixin):
 
     def cinz_8_top_symbol(self, top, symbol):
         source = self.assemble(f"""
-            _RAW <[>
+            _RAW "<[>"          
             CALL {symbol}
-            _RAW <[-]]
+            _RAW "<[-]]"       
         """)
         self.stack_pointer -= 1
         return source
@@ -48,9 +53,24 @@ class ControlMixin(AssemblerMixin):
 
     def cwnz8_top_symbol(self, top ,symbol):
         source = self.assemble(f"""
-            _RAW <[>
+            _RAW "<[>"           
             CALL {symbol}
-            _RAW <]
+            _RAW "<]"       
         """)
         self.stack_pointer -= 1
         return source
+
+    def ifnz_top(self, top):
+        return "+<[>-"
+
+    def _else(self):
+        return "]>[-"
+
+    def znfi(self):
+        return ">]<"
+
+    def whil_top(self, top):
+        return "<[>"
+
+    def lihw(self):
+        return "<]>"
