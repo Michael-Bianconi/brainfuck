@@ -265,8 +265,8 @@ class TestMemoryMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
-    def test_geti_top8_top8(self):
-        cases = [3]
+    def test_geti_8_top_top(self):
+        cases = [0, 1, 2, 3, 4]
 
         def source(case):
             return f"""
@@ -285,29 +285,23 @@ class TestMemoryMixin(TestAssembler):
         self.run_and_check(cases, source, check)
 
     def test_geti_16_top_top(self):
-        cases = [255]
+        cases = [250]
 
         def source(case):
             bfasm = ""
 
-            # Fill addresses 0-246 with 0
-            for i in range(123):
-                bfasm += f"PUSH:16 @top 0\n"
-
-            # Fill address 246-266 with their own address
-            for i in range(123, 133):
+            # Fill addresses 0-300 with that address as the value
+            for i in range(150):
                 bfasm += f"PUSH:16 @top {i * 2}\n"
 
             return bfasm + f"""
                 PUSH:16 @top {case}
-                _DBG
-                _DBG
                 GETI:16 @top @top
-                _DBG
             """
 
         def check(case):
-            self.assertStackContents([0, 1, 2, 1, 4, 1, 6, 1, 8, 1] + self.to16bit(case), 268)
+            expected = [34, 1, 36, 1, 38, 1, 40, 1, 42, 1] + self.to16bit(case)
+            self.assertStackContents(expected, 302)
 
         self.run_and_check(cases, source, check)
 

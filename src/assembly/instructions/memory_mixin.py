@@ -204,7 +204,6 @@ class MemoryMixin(AssemblerMixin):
                     SWAP:16 @top @top
                     PUSH:16 @top @top
                     _MDL 2
-                    _DBG
                     _JFZ         
                         _MDL 6
                         _MOV:16 8
@@ -215,8 +214,6 @@ class MemoryMixin(AssemblerMixin):
                         _MDL 2
                         _SUB:16 2
                     _JBN
-                    _HLT
-                    _DBG
                     _MDL 6
                     _CPY:16 2 6
                     _MDR 4

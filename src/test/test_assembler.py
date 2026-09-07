@@ -2,13 +2,14 @@ from unittest import TestCase
 
 from src.assembly.assembler import Assembler
 from src.interpreter.interpreter import Interpreter
+from src.interpreter.optimizedinterpreter import OptimizedInterpreter
 
 
 class TestAssembler(TestCase):
 
     def setUp(self) -> None:
         self.assembler = Assembler()
-        self.interpreter = Interpreter()
+        self.interpreter = OptimizedInterpreter()
 
     def assertStackContents(self, expected_content, expected_pointer):
         """
