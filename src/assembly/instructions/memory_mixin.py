@@ -193,7 +193,8 @@ class MemoryMixin(AssemblerMixin):
 
         Pops an address off the stack. Pushes the value at that address onto the stack.
 
-        The address MUST be a multiple of 2.
+        The address MUST be a multiple of 2, and be at least 4 less than the stack pointer
+        (it cannot point to the address being used for this instruction).
         """
         self.stack_pointer -= 4
         return self.assemble(f"""
@@ -277,15 +278,56 @@ class MemoryMixin(AssemblerMixin):
 
 
     def seti_8_8_top_top(self, top1, top2):
-        source = self.assemble(f"""
-                PUSH @top 0                             # [... x ... v i 0 | 0]
-                SWAP @top @top                          # [... x ... v 0 i | 0]
-                _RAW "<[[>]+[<]>-]>[>]+"                # [... x ... v 0 0 S 1 ... 1 | 0]
-                _RAW "<[<]<<[>>>[>]<+[<]<<-]>>>[>]<->"  # [... x ... 0 0 0 S 1 ... 1 v | 0
-                POPV @-1 @top                           # [... v ... 0 0 S 0 1 ... 1 | 0 0]
-                _RAW "<[-<]<<"                          # [... x ... | 0]
-            """)
+        """
+        SETI (SET INDIRECT 8-BIT)
+
+        Pops the value to write off the stack. Pops an address off the stack.
+        Sets the cell at that address to the provided value.
+
+        1. Set up initial state [... v a|0 0] > [... v a a 0]
+        """
         self.stack_pointer -= 2
+        source = self.assemble(f"""
+            _DBG
+            _DBG
+            PUSH @top {self.stack_pointer - 1}
+            SWAP @top @top
+            SUBT @top @top @top
+            _MDL 1
+            _CPY 1 2
+            _MDR 1
+            _JFZ
+                _DBG
+                _DBG
+                _MDL 3
+                _MOV 4
+                _MDR 1
+                _MOV -1
+                _MDR 1
+                _MOV -1
+                _MDR 1
+                _MOV -1
+                _MDL 1
+                _SUB 1
+            _JBN
+            _DBG
+            _DBG
+            _MDL 3
+            _SET 0
+            _MDR 1
+            _MOV -1
+            _MDR 1
+            _JFZ
+                _DBG
+                _DBG
+                _MOV 1
+                _MDR 3
+                _MOV -4
+                _MDL 2
+                _SUB 1
+            _JBN
+            _MDL 1
+            """)
         return source
 
     def swap_8_8_top_top(self,  top1, top2):

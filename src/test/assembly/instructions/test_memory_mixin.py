@@ -315,14 +315,16 @@ class TestMemoryMixin(TestAssembler):
                 PUSH @top 3
                 PUSH @top 4
                 PUSH @top 5
-                PUSH @top 10
+                PUSH @top 8
                 PUSH @top {case}
                 SETI @top @top
+                _DBG
+                _DBG
             """
 
         def check(case):
             expected = [1, 2, 3, 4, 5]
-            expected[case] = 10
+            expected[case] = 8
             self.assertStackContents(expected, 5)
 
         self.run_and_check(cases, source, check)
