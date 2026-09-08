@@ -285,7 +285,7 @@ class TestMemoryMixin(TestAssembler):
         self.run_and_check(cases, source, check)
 
     def test_geti_16_top_top(self):
-        cases = [250]
+        cases = [2, 250]
 
         def source(case):
             bfasm = ""

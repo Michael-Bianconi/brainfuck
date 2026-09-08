@@ -9,11 +9,12 @@ class ComparisonMixin(AssemblerMixin):
 
             ("EQLS", ("Top", "Top", "Top")): self.eqls_8_top_top_top,
             ("EQLS", ("Top", "Top", "Immediate")): self.eqls_8_top_top_immediate,
-            ("EQLS:8:16:16", ("Top", "Top", "Top")): self.eqls_8_16_16_top_top_top,
+            ("EQLS:16", ("Top", "Top", "Top")): self.eqls_16_top_top_top,
 
             ("GRTR", ("Top", "Top", "Top")): self.grtr_8_top_top_top,
 
             ("LAND", ("Top", "Top", "Top")): self.land_8_top_top_top,
+            ("LAND:16", ("Top", "Top", "Top")): self.land_16_top_top_top,
 
             ("LESS", ("Top", "Top", "Top")): self.less_8_top_top_top,
 
@@ -27,10 +28,26 @@ class ComparisonMixin(AssemblerMixin):
 
     def land_8_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 1
-        return ''.join([        # [0, 0 | 0]        [n, 0 | 0]      [0, y | 0]      [x, y | 0]
+        return ''.join([        # [0, 0 | 0]        [x, 0 | 0]      [0, y | 0]      [x, y | 0]
             '<<[>>+<<[-]]'      # [| 0, 0, 0]       [| 0, 0, 1]     [| 0, y, 0]     [| 0, y, 1]
             '>[>+<[-]]>',       # [0, 0 | 0]        [0, 0 | 1]      [0, 0 | 1]      [0, 0 | 2]
             '[-[<<+>>[-]]]<'    # [0 | 0, 0]        [0 | 0, 0]      [0 | 0, 0]      [1 | 0, 0]
+        ])
+
+    def land_16_top_top_top(self, top1, top2, top3):
+        """
+        LAND @TOP @TOP @TOP (LOGICAL AND)
+
+        Pop the top two values off the stack. If both are non-zero, push 1 onto the stack.
+        If either is zero, push 0 onto the stack.
+        """
+        self.stack_pointer -= 2
+        return ''.join([             # [a0 a1 b0 b1 00<]
+            '<<<<[>>>>+<<<<[-]]'     # [00<a1 b0 b1 xx ]
+            '>[>>>+<<<[-]]'          # [00 00<b0 b1 xx ]
+            '>[>>+<<[-]]'            # [00 00 00<b1 xx ]
+            '>[>+<[-]]'              # [00 00 00 00<xx ]
+            '>[-[<<<<+>>>>[-]]]<<'   # [xx 00<00 00 00 ]
         ])
 
     def less_8_top_top_top(self, top1, top2, top3):
@@ -67,7 +84,15 @@ class ComparisonMixin(AssemblerMixin):
             _RAW "+<[[-]>-<]>[<+>-]"       
         """)
 
-    def eqls_8_16_16_top_top_top(self, top1, top2, top3):
+    def eqls_16_top_top_top(self, top1, top2, top3):
+        """
+        EQLS @TOP @TOP @TOP (EQUALS)
+
+        Pops the top two values off the stack. Push 1 onto the stack if they are equal.
+        Push 0 onto the stack if they are not.
+
+        TODO
+        """
         x1 = self.stack_pointer - 8
         x2 = self.stack_pointer - 7
         y1 = self.stack_pointer - 4

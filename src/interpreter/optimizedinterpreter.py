@@ -1,6 +1,6 @@
 import sys
 
-from src.parsers.bfparser import BrainfuckParser
+from src.parsers.brainfuckparser import BrainfuckParser
 
 
 class OptimizedInterpreter:

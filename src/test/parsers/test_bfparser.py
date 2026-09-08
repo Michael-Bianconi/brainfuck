@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from src.parsers.bfparser import BrainfuckParser, OBFToken
+from src.parsers.brainfuckparser import BrainfuckParser, OBFToken
 
 
 class TestParser(TestCase):

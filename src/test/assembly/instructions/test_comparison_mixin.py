@@ -20,6 +20,24 @@ class TestComparisonMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
+    def test_land_16_top_top_top(self):
+        cases = [[0, 0], [1, 0], [5, 0], [255, 0], [1, 1], [5, 5], [255, 255],
+                 [256, 0], [300, 300]]
+        cases.extend([x[::-1] for x in cases])
+
+        def source(case):
+            return f"""
+                PUSH:16 @top 1
+                PUSH:16 @top {case[0]}
+                PUSH:16 @top {case[1]}
+                LAND:16 @top @top @top
+            """
+
+        def check(case):
+            self.assertStackContents([1, 0, 1 if (case[0] > 0 and case[1] > 0) else 0, 0], 4)
+
+        self.run_and_check(cases, source, check)
+
     def test_loor_8_top_top_top(self):
         cases = [[0, 0], [1, 0], [5, 0], [255, 0], [1, 1], [5, 5], [255, 255]]
         cases.extend([x[::-1] for x in cases])

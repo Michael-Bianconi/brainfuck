@@ -7,14 +7,13 @@ class MemoryMixin(AssemblerMixin):
         return {
             ("ALOC:16", ("Symbol", "Immediate")): self.aloc_16,
 
-            ("GETI", ("Top", "Top")): self.geti_8_8_top_top,
+            ("GETI", ("Top", "Top")): self.geti_8_top_top,
             ("GETI:16", ("Top", "Top")): self.geti_16_top_top,
 
             ("PUSH", ("Top", "Top")): self.push_8_8_top_top,
             ("PUSH", ("Top", "Immediate")): self.push_8_top_immediate,
             ("PUSH", ("Top", "Address")): self.push_8_8_top_address,
             ("PUSH", ("Address", "Immediate")): self.push_8_address_immediate,
-
             ("PUSH:16", ("Top", "Top")): self.push_16_top_top,
             ("PUSH:16", ("Top", "Immediate")): self.push_16_top_immediate,
             ("PUSH:16", ("Top", "Address")): self.push_16_16_top_address,
@@ -22,7 +21,6 @@ class MemoryMixin(AssemblerMixin):
 
             ("POPV", ("Top",)): self.popv_8_top,
             ("POPV", ("Address", "Top")): self.popv_8_8_address_top,
-
             ("POPV:16", ("Top",)): self.popv_16_top,
             ("POPV:16", ("Address", "Top")): self.popv_16_address_top,
 
@@ -146,7 +144,7 @@ class MemoryMixin(AssemblerMixin):
             _MDR:8 {offset-1}
         """)
 
-    def geti_8_8_top_top(self, top1, top2):
+    def geti_8_top_top(self, top1, top2):
         """
         GETI (GET INDIRECT)
 
@@ -194,6 +192,8 @@ class MemoryMixin(AssemblerMixin):
         GETI:16 @TOP @TOP (GET INDIRECT)
 
         Pops an address off the stack. Pushes the value at that address onto the stack.
+
+        The address MUST be a multiple of 2.
         """
         self.stack_pointer -= 4
         return self.assemble(f"""
@@ -204,7 +204,7 @@ class MemoryMixin(AssemblerMixin):
                     SWAP:16 @top @top
                     PUSH:16 @top @top
                     _MDL 2
-                    _JFZ         
+                    _JFZ
                         _MDL 6
                         _MOV:16 8
                         _MDR 4
@@ -214,6 +214,30 @@ class MemoryMixin(AssemblerMixin):
                         _MDL 2
                         _SUB:16 2
                     _JBN
+                    _MDR 1
+                    _JFZ
+                        _MDL 1
+                        _MDL 6
+                        _MOV:16 8
+                        _MDR 4
+                        _MOV:16 -2
+                        _MDR 2
+                        _MOV:16 -2
+                        _MDL 2
+                        _SUB:16 2
+                        _JFZ
+                            _MDL 6
+                            _MOV:16 8
+                            _MDR 4
+                            _MOV:16 -2
+                            _MDR 2
+                            _MOV:16 -2
+                            _MDL 2
+                            _SUB:16 2
+                        _JBN
+                        _MDR 1
+                    _JBN
+                    _MDL 1
                     _MDL 6
                     _CPY:16 2 6
                     _MDR 4
@@ -226,6 +250,29 @@ class MemoryMixin(AssemblerMixin):
                         _MDL 4
                         _SUB:16 2
                     _JBN
+                    
+                    _MDR 1
+                    _JFZ
+                        _MDL 1
+                        _MOV:16 2
+                        _MDL 2
+                        _MOV:16 2
+                        _MDR 8
+                        _MOV:16 -8
+                        _MDL 4
+                        _SUB:16 2
+                        _JFZ
+                            _MOV:16 2
+                            _MDL 2
+                            _MOV:16 2
+                            _MDR 8
+                            _MOV:16 -8
+                            _MDL 4
+                            _SUB:16 2
+                        _JBN
+                        _MDR 1
+                    _JBN
+                    _MDL 1
                 """)
 
 
