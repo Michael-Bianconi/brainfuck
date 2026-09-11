@@ -25,6 +25,7 @@ class MemoryMixin(AssemblerMixin):
             ("POPV:16", ("Address", "Top")): self.popv_16_address_top,
 
             ("SETI", ("Top", "Top")): self.seti_8_8_top_top,
+            ("SETI:16", ("Top", "Top", "Top")): self.seti_16_top_top_top,
 
             ("SWAP", ("Top", "Top")): self.swap_8_8_top_top,
             ("SWAP:16", ("Top", "Top")): self.swap_16_top_top,
@@ -54,9 +55,22 @@ class MemoryMixin(AssemblerMixin):
         """
         PUSH:16 @TOP @TOP
 
-        Pushes the top value on the stack to the top of the stack (copying it).
+        BEHAVIOR:
+            1. Pushes the top value on the stack to the top of the stack (copying it).
+            2. Increments stack pointer by 2.
+
+        EXAMPLE:
+            PUSH @top @top
+            [0 0 2 0 4 0] > [0 0 2 0 2 0 6 0]
         """
-        return self.assemble(f"PUSH:16:16 @top @{self.stack_pointer - 2}")
+        return self.assemble(f"""
+            _CPY:16 2 4
+            _SET:16 0
+            _MDL 2
+            _CPY:16 2 8
+            _MDR 4
+            _ADD:16 2
+        """)
 
     def push_8_top_immediate(self, top, immediate):
         self.stack_pointer += 1
@@ -69,16 +83,22 @@ class MemoryMixin(AssemblerMixin):
         """
         PUSH @TOP IMM
 
-        Pushes a 16-bit immediate value onto the stack.
+        BEHAVIOR:
+            1. Pushes the provided 16-bit immediate value onto the stack.
+            2. Increments the stack pointer by 2.
 
-        :param top: Unused.
-        :param immediate: Value to push onto the stack.
+        EXAMPLE:
+            PUSH @top 5
+            [0 0 2 0] > [0 0 5 0 2 0]
         """
-        self.stack_pointer += 2
         return self.assemble(f"""
-             _ADD:16 {immediate}
-             _MDR:8 2
-         """)
+            _MOV:16 4    
+            _ADD:16 {immediate}
+            _MDR:8 4
+            _ADD:16 2
+            _MOV:16 -2
+            _MDL:8 2
+        """)
 
     def push_8_8_top_address(self, top, address):
         offset = self.stack_pointer - address
@@ -191,19 +211,31 @@ class MemoryMixin(AssemblerMixin):
         """
         GETI:16 @TOP @TOP (GET INDIRECT)
 
-        Pops an address off the stack. Pushes the value at that address onto the stack.
+        BEHAVIOR:
+            1. Pops an absolute address off the stack. Pushes the 16-bit value at that
+               location in memory onto the stack.
+            2. Stack pointer remains unchanged.
 
-        The address MUST be a multiple of 2, and be at least 4 less than the stack pointer
-        (it cannot point to the address being used for this instruction).
+        EXAMPLE:
+            GETI @top @top
+            [5 0 6 0 7 0 2 0 8 0] > [5 0 6 0 7 0 7 0 8 0]
+
+        NOTES:
+            1. The address MUST be a multiple of 2, and be at least 4 less than the stack pointer
+               (it cannot point to the address being used for this instruction).
         """
-        self.stack_pointer -= 4
         return self.assemble(f"""
-                    PUSH:16 @top {self.stack_pointer}
+                    _CPY:16 2 4
+                    _MDR 2
+                    _ADD:16 2
+                    PUSH:16 @top 4
+                    SUBT:16 @top @top @top
                     SWAP:16 @top @top
                     SUBT:16 @top @top @top
                     PUSH:16 @top 0
                     SWAP:16 @top @top
                     PUSH:16 @top @top
+                    _MOV:16 4
                     _MDL 2
                     _JFZ
                         _MDL 6
@@ -274,6 +306,10 @@ class MemoryMixin(AssemblerMixin):
                         _MDR 1
                     _JBN
                     _MDL 1
+                    _MDR 8
+                    _MOV:16 -8
+                    _MDL 8
+                    _SUB:16 4
                 """)
 
 
@@ -288,8 +324,6 @@ class MemoryMixin(AssemblerMixin):
         """
         self.stack_pointer -= 2
         source = self.assemble(f"""
-            _DBG
-            _DBG
             PUSH @top {self.stack_pointer - 1}
             SWAP @top @top
             SUBT @top @top @top
@@ -297,8 +331,6 @@ class MemoryMixin(AssemblerMixin):
             _CPY 1 2
             _MDR 1
             _JFZ
-                _DBG
-                _DBG
                 _MDL 3
                 _MOV 4
                 _MDR 1
@@ -310,16 +342,12 @@ class MemoryMixin(AssemblerMixin):
                 _MDL 1
                 _SUB 1
             _JBN
-            _DBG
-            _DBG
             _MDL 3
             _SET 0
             _MDR 1
             _MOV -1
             _MDR 1
             _JFZ
-                _DBG
-                _DBG
                 _MOV 1
                 _MDR 3
                 _MOV -4
@@ -327,6 +355,106 @@ class MemoryMixin(AssemblerMixin):
                 _SUB 1
             _JBN
             _MDL 1
+            """)
+        return source
+
+    def seti_16_top_top_top(self, top1, top2, top3):
+        """
+        SETI (SET INDIRECT 8-BIT)
+
+        Pops the value to write off the stack. Pops an address off the stack.
+        Sets the cell at that address to the provided value.
+
+        1. Set up initial state [... v a|0 0] > [... v a a 0]
+        """
+        source = self.assemble(f"""
+            _CPY:16 2 4
+            _MDR 2
+            _ADD:16 2
+            PUSH:16 @top 6
+            SUBT:16 @top @top @top
+            SWAP:16 @top @top
+            SUBT:16 @top @top @top
+            PUSH:16 @top @top
+            _MOV:16 2
+            _MDL 2
+            _DBG
+            _DBG
+            _JFZ
+                _MDL 6
+                _MOV:16 8
+                _MDR 2
+                _MOV:16 -2
+                _MDR 2
+                _MOV:16 -2
+                _MDR 2
+                _MOV:16 -2
+                _MDL 2
+                _SUB:16 2
+            _JBN
+            _DBG
+            _DBG
+            _MDR 1
+            _JFZ
+                _MDL 7
+                _MOV:16 8
+                _MDR 2
+                _MOV:16 -2
+                _MDR 2
+                _MOV:16 -2
+                _MDR 2
+                _MOV:16 -2
+                _MDL 2
+                _SUB:16 2
+                _JFZ
+                    _MDL 6
+                    _MOV:16 8
+                    _MDR 2
+                    _MOV:16 -2
+                    _MDR 2
+                    _MOV:16 -2
+                    _MDR 2
+                    _MOV:16 -2
+                    _MDL 2
+                    _SUB:16 2
+                _JBN
+                _MDR 1
+            _JBN
+            _DBG
+            _DBG
+            _MDL 7
+            _SET:16 0
+            _MDR 2
+            _MOV:16 -2
+            _MDR 2
+            _JFZ
+                _MOV:16 2
+                _MDR 6
+                _MOV:16 -8
+                _MDL 4
+                _SUB:16 2
+            _JBN
+            _MDR 1
+            _JFZ
+                _MDL 1
+                _MOV:16 2
+                _MDR 6
+                _MOV:16 -8
+                _MDL 4
+                _SUB:16 2
+                _JFZ
+                    _MOV:16 2
+                    _MDR 6
+                    _MOV:16 -8
+                    _MDL 4
+                    _SUB:16 2
+                _JBN
+                _MDR 1
+            _JBN
+            _MDR 5
+            _MOV:16 -8
+            _MDL 8
+            _SUB:16 6
             """)
         return source
 
@@ -346,15 +474,22 @@ class MemoryMixin(AssemblerMixin):
         """
         SWAP @TOP @TOP
 
-        Swaps the top value on the stack with the preceding value.
+        BEHAVIOR:
+            1. Swaps the top value on the stack with the 2nd top value.
+            2. Stack pointer remains unchanged.
+
+        EXAMPLE:
+            SWAP @top @top
+            [0 0 4 0 3 0 6 0] > [0 0 3 0 4 0 6 0]
         """
         return self.assemble(f"""
             _MDL 2
-            _MOV:16 2
+            _MOV:16 4
             _MDL 2
             _MOV:16 2
-            _MDR 4
-            _MOV:16 -4
+            _MDR 6
+            _MOV:16 -6
+            _MDL 2
         """)
 
     def popv_8_top(self, top):

@@ -35,11 +35,11 @@ class OptimizedInterpreter:
                 elif op.operator == 'res':
                     self.memory[self.dptr] = 0
                 elif op.operator == 'mov':
-                    self.memory[self.dptr + op.args[0]] += self.memory[self.dptr]
+                    self.memory[self.dptr + op.args[0]] = (self.memory[self.dptr + op.args[0]] + self.memory[self.dptr]) % 256
                     self.memory[self.dptr] = 0
                 elif op.operator == 'mmv':
-                    self.memory[self.dptr + op.args[0]] += self.memory[self.dptr]
-                    self.memory[self.dptr + op.args[0] + op.args[1]] += self.memory[self.dptr]
+                    self.memory[self.dptr + op.args[0]] = (self.memory[self.dptr + op.args[0]] + self.memory[self.dptr]) % 256
+                    self.memory[self.dptr + op.args[0] + op.args[1]] = (self.memory[self.dptr + op.args[0] + op.args[1]] + self.memory[self.dptr]) % 256
                     self.memory[self.dptr] = 0
                 elif op.operator == '.':
                     print(chr(self.memory[self.dptr]), flush=True, end='')
@@ -55,7 +55,7 @@ class OptimizedInterpreter:
                     dump_dptr = min(12, self.dptr)
                     mem_dump = list(' ' + ' '.join(['{:02x}'.format(i) for i in self.memory[tape_start:tape_start+20]]) + ' ')
                     mem_dump[3 * dump_dptr] = '('
-                    mem_dump[3 * (dump_dptr+1)] = ')'
+                    mem_dump[3 * (dump_dptr+2)] = ')'
                     mem_dump = ''.join(mem_dump)
 
                     print(f"DEBUG: i=[{'{:5d}'.format(self.iptr)}] d=[{'{:5d}'.format(self.dptr)}] op=[{op.__repr__()}] {mem_dump}")

@@ -76,16 +76,17 @@ class ArithmeticMixin(AssemblerMixin):
         """
         PLUS:16 @TOP @TOP @TOP
 
-        Pops the top two 16-bit values off the stack, adds them together,
-        and places the sum back on the stack.
+        BEHAVIOR:
+            1. Pops the top two 16-bit values off the stack, adds them together,
+               and places the sum back on the stack.
+            2. Decrements stack pointer by 2.
 
-        :param top1:
-        :param top2:
-        :param top3:
-        :return:
+        EXAMPLE:
+            PLUS @top @top @top
+            [0 0 5 0 3 0 6 0] > [0 0 8 0 4 0]
         """
-        self.stack_pointer -= 2
         return self.assemble(f"""
+            _MOV:16 4
             _MDL 2
             _MOV:16 2
             _MDR 3
@@ -103,14 +104,23 @@ class ArithmeticMixin(AssemblerMixin):
                 _MDR:8 4
                 _SUB:16 1
             _JBN
-            _MDL 2   
+            _MDR 4
+            _SUB:16 2
+            _MOV:16 -6
+            _MDL 6
         """)
 
     def plus_16_top_top_immediate(self, top1, top2, immediate):
         """
         PLUS:16 @TOP @TOP IMM
 
-        Adds an immediate value to the value at the top of the stack.
+        BEHAVIOR:
+            1. Adds an immediate value to the value at the top of the stack.
+            2. Stack pointer remains unchanged.
+
+        EXAMPLE:
+            PLUS @top @top 3
+            [0 0 5 0 4 0] > [0 0 8 0 4 0]
         """
         return self.assemble(f"""
             PUSH:16 @top {immediate}
@@ -170,12 +180,16 @@ class ArithmeticMixin(AssemblerMixin):
         """
         SUBT @TOP @TOP @TOP (SUBTRACT 16-BIT)
 
-        Pops the top two values off the stack.
-        Subtracts the top value on the stack from the preceding value.
-        Stores the result on the stack
+        BEHAVIOR:
+            1. Pops the top two values off the stack. Subtracts the top value from
+               the 2nd value on the stack. Pushes the result onto the stack.
+            2. Decrements the stack pointer by 2.
+
+        EXAMPLE:
+            [0 0 5 0 3 0 6 0] > [0 0 2 0 4 0]
         """
-        self.stack_pointer -= 2
         return self.assemble(f"""
+            _MOV:16 4
             _MDL 2
             _MOV:16 2
             _MDR 3
@@ -193,7 +207,10 @@ class ArithmeticMixin(AssemblerMixin):
                 _MDR:8 4
                 _SUB:16 1
             _JBN
-            _MDL 2    
+            _MDR 4
+            _SUB:16 2
+            _MOV:16 -6
+            _MDL 6    
         """)
 
 

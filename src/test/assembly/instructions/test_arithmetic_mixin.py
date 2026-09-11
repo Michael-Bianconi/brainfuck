@@ -99,24 +99,26 @@ class TestArithmeticMixin(TestAssembler):
             """
 
         def check(case):
-            self.assertStackContents(self.to16bit(sum(case)), 2)
+            self.assertStackContents(self.to16bit(sum(case)) + self.to16bit(2), 2)
 
         self.run_and_check(cases, source, check)
 
-    def test_subt_top16_top16_top16(self):
+    def test_subt_16_top_top_top(self):
         cases = [
             (0, 0), (0, 1), (5, 5), (2, 253), (1, 255), (256, 10), (1000, 2000), (65534, 1), (268, 255),
             (6553, 1), (1, 6553), (30000, 5), (5, 30000), (65530, 5), (5, 65530), (65535, 2), (2, 65535)]
 
         def source(case):
+            setup = "PUSH:16 @top 5\n" *150
             return f"""
+                {setup}
                 PUSH:16 @top {case[0]}
                 PUSH:16 @top {case[1]}
                 SUBT:16 @top @top @top
             """
 
         def check(case):
-            self.assertStackContents(self.to16bit(case[0]-case[1]), 2)
+            self.assertStackContents([5, 0, 5, 0] + self.to16bit(case[0]-case[1]) + self.to16bit(302), 4)
 
         self.run_and_check(cases, source, check)
 

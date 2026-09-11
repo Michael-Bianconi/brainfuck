@@ -18,13 +18,11 @@ class TestAssembler(TestCase):
         :param expected_pointer: The position of the stack pointer.
         :return:
         """
-        start = self.assembler.stack_pointer - len(expected_content)
-        actual_content = self.interpreter.memory[start:self.assembler.stack_pointer]
-        self.assertListEqual(actual_content, expected_content, msg=f"Expected {expected_content} got {actual_content}")
-        self.assertEqual(self.assembler.stack_pointer, expected_pointer, msg=self.dump_interpreter())
-        self.assertListEqual(self.interpreter.memory[expected_pointer:expected_pointer+10], [0] * 10,
+
+        actual_content = self.interpreter.memory[max(0, self.interpreter.dptr - len(expected_content) + 2):self.interpreter.dptr+2]
+        self.assertListEqual(actual_content, expected_content, msg=f"Expected {expected_content} got {actual_content}, dptr={self.interpreter.dptr}")
+        self.assertListEqual(self.interpreter.memory[self.interpreter.dptr+2:self.interpreter.dptr+12], [0] * 10,
                              msg='Expected cells past stack pointer to be empty' + self.dump_interpreter())
-        self.assertEqual(self.assembler.stack_pointer, self.interpreter.dptr)
 
     def to16bit(self, i):
         lo = (i % 65536) & 0b0000000011111111
