@@ -104,22 +104,6 @@ class TestComparisonMixin(TestAssembler):
 
         self.run_and_check(cases, source, check)
 
-    def test_eqls8_top_top_immediate(self):
-
-        cases = [[5, 0],[0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255]]
-        cases.extend([x[::-1] for x in cases])
-
-        def source(case):
-            return f"""
-                PUSH @top {case[0]}
-                EQLS @top @top {case[1]}
-            """
-
-        def check(case):
-            self.assertStackContents([1 if case[0] == case[1] else 0], 1)
-
-        self.run_and_check(cases, source, check)
-
     def test_eqls16_top_top_top(self):
 
         cases = [[5, 5], [0, 5], [0, 0], [5, 4], [255, 4], [5, 255], [0, 255], [255, 255],

@@ -20,6 +20,8 @@ class InternalMixin(AssemblerMixin):
             ("_ADD", ("Immediate",)): self.add_8,
             ("_SUB", ("Immediate",)): self.sub_8,
             ("_SET", ("Immediate",)): self.setcell_8,
+            ("_EQL", ("Immediate", "Immediate")): self.eql_8,
+            ("_NEQ", ("Immediate", "Immediate")): self.neq_8,
             ("_JFZ", ()): self.jfiz,
             ("_JBN", ()): self.jbnz,
             ("_DBG", ()): self.dbg,
@@ -32,6 +34,8 @@ class InternalMixin(AssemblerMixin):
             ("_MDR:16", ("Immediate",)): self.mdr_16,
             ("_SET:16", ("Immediate",)): self.setcell_16,
             ("_SUB:16", ("Immediate",)): self.sub_16,
+            ("_EQL:16", ("Immediate", "Immediate")): self.eql_16,
+            # ("_NEQ:8", ("Immediate", "Immediate")): self.neq_16,
         }
 
     def mdr_8(self, immediate):
@@ -282,3 +286,108 @@ class InternalMixin(AssemblerMixin):
               this should be used only for debugging purposes.
         """
         return "H"
+
+    def eql_8(self, imm, tmp):
+        """
+        _EQL imm temp (EQUALS IMMEDIATE 8-BIT)
+        
+        BEHAVIOR:
+
+            1. Checks if the current cell is equal to the provided immediate value.
+               Sets cell to 1 if equal, 0 otherwise.
+            2. Data pointer remains unchanged.
+
+        EXAMPLE:
+
+                        [05< 00]
+            _EQI 5 1    [01< 00]
+
+        PERFORMANCE (with an optimizing interpreter):
+
+            Memory Complexity: 2 cells
+            Time Complexity: O(1)
+
+        NOTES:
+
+            1. temp is the relative address of a cell used for temporary storage. This
+               cell must start at 0, and will be 0 at the end.
+
+        """
+        imm = imm % 256
+        return self.assemble(f"""
+            _SUB {imm}
+            _MDR {tmp}
+            _ADD 1
+            _MDL {tmp}
+            _JFZ
+                _MDR {tmp}
+                _SUB 1
+                _MDL {tmp}
+                _SET 0
+            _JBN
+            _MDR {tmp}
+            _MOV {-tmp}
+            _MDL {tmp}
+        """)
+
+    def eql_16(self, imm, tmp):
+        """
+
+        :param imm:
+        :param tmp:
+        :return:
+        """
+        lo = (imm % 65536) & 0b0000000011111111
+        hi = ((imm % 65536) & 0b1111111100000000) >> 8
+        return self.assemble(f"""
+            _EQL:8 {lo} {tmp}
+            _MDR:8 1
+            _EQL:8 {hi} {tmp}
+            _MOV:8 -1
+            _MDL:8 1
+            _EQL:8 2 {tmp}
+        """)
+
+    def neq_8(self, imm, tmp):
+        """
+        _NEQ IMM TMP (NOT EQUAL TO IMMEDIATE)
+
+        BEHAVIOR:
+            1. Sets current cell to 1 if value does not equal immediate.
+            2. Data pointer remains unchanged.
+
+        PERFORMANCE (with optimizing interpreter):
+            Memory complexity: 2 cells
+            Time complexity: O(1)
+        """
+        imm = imm % 256
+        return self.assemble(f"""
+            _SUB:8 {imm}
+            _JFZ
+                _MDR:8 {tmp}
+                _ADD:8 1
+                _MDL:8 {tmp}
+                _SET:8 0
+            _JBN
+            _MDR:8 {tmp}
+            _MOV:8 {-tmp}
+            _MDL:8 {tmp}
+        """)
+
+    def neq_16(self, imm, tmp):
+        """
+
+        :param imm:
+        :param tmp:
+        :return:
+        """
+        lo = (imm % 65536) & 0b0000000011111111
+        hi = ((imm % 65536) & 0b1111111100000000) >> 8
+        return self.assemble(f"""
+            _NEQ:8 {lo} {tmp}
+            _MDR:8 1
+            _NEQ:8 {hi} {tmp}
+            _MOV:8 -1
+            _MDL:8 1
+            _EQL:8 2 {tmp}
+        """)

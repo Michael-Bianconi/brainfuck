@@ -8,7 +8,6 @@ class ComparisonMixin(AssemblerMixin):
             ("GRTR", ("Top", "Top", "Immediate")): self.grtr_8_top_top_immediate,
 
             ("EQLS", ("Top", "Top", "Top")): self.eqls_8_top_top_top,
-            ("EQLS", ("Top", "Top", "Immediate")): self.eqls_8_top_top_immediate,
             ("EQLS:16", ("Top", "Top", "Top")): self.eqls_16_top_top_top,
 
             ("GRTR", ("Top", "Top", "Top")): self.grtr_8_top_top_top,
@@ -97,8 +96,11 @@ class ComparisonMixin(AssemblerMixin):
         x2 = self.stack_pointer - 7
         y1 = self.stack_pointer - 4
         y2 = self.stack_pointer - 3
-        source = self.assemble(f"""               # [x1 x2 0 0 y1 y2 0 0 | 0]           [x1 x2 0 0 x1 x2 0 0 | 0]   
-            PUSH @top @{x1}                       # [x1 x2 0 0 y1 y2 0 0 x1 | 0]        [x1 x2 0 0 x1 x2 0 0 x1 | 0]
+        source = self.assemble(f"""               # [x1 x2 y1 y2 | sp]           [x1 x2 x1 x2 | sp] 
+            _MOV:16 4
+            _MDL 4
+            _CPY 4 5
+            PUSH @top @{x1}                       # [x1 x2 y1 y2 x1 | 0]        [x1 x2 x1 x2 x1 | 0]
             PUSH @top @{y1}                       # [x1 x2 0 0 y1 y2 0 0 x1 y1 | 0]     [x1 x2 0 0 x1 x2 0 0 x1 x1 | 0]
             EQLS @top @top @top                   # [x1 x2 0 0 y1 y2 0 0 0 | 0]         [x1 x2 0 0 x1 x2 0 0 1 | 0]
             PUSH @top @{x2}                       # [x1 x2 0 0 y1 y2 0 0 0 x2 | 0]      [x1 x2 0 0 x1 x2 0 0 1 x2 | 0]
@@ -110,19 +112,6 @@ class ComparisonMixin(AssemblerMixin):
         """)
         self.stack_pointer -= 8
         return source
-
-    def eqls_8_top_top_immediate(self, top1, top2, immediate):
-        if immediate == 0:
-            return self.assemble(f"""   # [0 | 0 0]     [n | 0 0]
-                _RAW "+<[[-]>-]>"       # [0 | 1 0]     [0 0 | 0]
-                _RAW "[<+>->]<"         # [1 | 0 0]     [0 | 0 0]
-            """)
-
-        else:
-            return self.assemble(f"""
-                PUSH @top {immediate}
-                EQLS @top @top @top
-            """)
 
     def grtr_8_top_top_top(self, top1, top2, top3):
         self.stack_pointer -= 1     # a < b            a > b

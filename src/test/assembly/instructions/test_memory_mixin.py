@@ -354,14 +354,14 @@ class TestMemoryMixin(TestAssembler):
                 bfasm += f"PUSH:16 @top {i * 2}\n"
 
             return bfasm + f"""
-                PUSH:16 @top 8
+                PUSH:16 @top 257
                 PUSH:16 @top {case}
                 SETI:16 @top @top @top
             """
 
         def check(case):
             expected = [x for sublist in [self.to16bit(i) for i in range(0, 302, 2)] for x in sublist]
-            expected[case], expected[case+1] = self.to16bit(8)
+            expected[case], expected[case+1] = self.to16bit(257)
             self.assertStackContents(expected, 300)
 
         self.run_and_check(cases, source, check)

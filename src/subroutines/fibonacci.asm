@@ -1,3 +1,6 @@
-# Read in a number from stdin. Print that many numbers in the fibonacci sequence.
+# Pushes N onto the stack. Then pops it from the stack and pushes the first N fibonacci numbers.
 
-RINT
+PUSH:16 @top 5
+
+
+

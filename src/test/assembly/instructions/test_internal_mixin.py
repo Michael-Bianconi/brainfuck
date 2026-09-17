@@ -297,3 +297,111 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(0, self.interpreter.dptr)
 
         self.run_and_check(cases, source, check)
+
+    def test_eql_8(self):
+        cases = [
+            (0, 0), (0, 1), (0, 255),
+            (1, 0), (1, 1), (1, 5), (1, 255),
+            (5, 0), (5, 1), (5, 1), (5, 255),
+            (255, 0), (255, 1), (255, 5), (255, 255),
+            (0, 0, 5), (0, 5, 5), (5, 0, 5), (5, 5, 5),
+            (0, 0, -5), (0, 5, -5), (5, 0, -5), (5, 5, -5),
+        ]
+
+        def source(case):
+            return f"""
+                _MDR 5
+                _ADD {case[0]}
+                _EQL {case[1]} {case[2] if len(case) > 2 else 1}
+            """
+
+        def check(case):
+            expected = [0] * 30
+            expected[5] = 1 if case[0] == case[1] else 0
+            self.assertEqual(self.interpreter.memory[:30], expected)
+            self.assertEqual(5, self.interpreter.dptr)
+
+        self.run_and_check(cases, source, check)
+
+    def test_eql_16(self):
+        cases = [
+            (0, 0), (0, 1), (0, 255),
+            (1, 0), (1, 1), (1, 5), (1, 255),
+            (5, 0), (5, 1), (5, 1), (5, 255),
+            (255, 0), (255, 1), (255, 5), (255, 255),
+            (256, 0), (256, 5), (256, 256),
+            (260, 4),
+            (2557, 2557), (2557, 2558),
+            (256, 0), (256, 5), (256, 256),
+            (0, 0, 5), (0, 5, 5), (5, 0, 5), (5, 5, 5),
+            (0, 0, -5), (0, 5, -5), (5, 0, -5), (5, 5, -5),
+        ]
+
+        def source(case):
+            return f"""
+                _MDR 4
+                _ADD:16 {case[0]}
+                _EQL:16 {case[1]} {case[2] if len(case) > 2 else 2}
+            """
+
+        def check(case):
+            expected = [0] * 30
+            expected[4] = 1 if case[0] == case[1] else 0
+            self.assertEqual(self.interpreter.memory[:30], expected)
+            self.assertEqual(4, self.interpreter.dptr)
+
+        self.run_and_check(cases, source, check)
+
+    def test_neq(self):
+        cases = [
+            (0, 0), (0, 1), (0, 255),
+            (1, 0), (1, 1), (1, 5), (1, 255),
+            (5, 0), (5, 1), (5, 1), (5, 255),
+            (255, 0), (255, 1), (255, 5), (255, 255),
+            (0, 0, 5), (0, 5, 5), (5, 0, 5), (5, 5, 5),
+            (0, 0, -5), (0, 5, -5), (5, 0, -5), (5, 5, -5),
+        ]
+
+        def source(case):
+            return f"""
+                _MDR 5
+                _ADD {case[0]}
+                _NEQ {case[1]} {case[2] if len(case) > 2 else 1}
+            """
+
+        def check(case):
+            expected = [0] * 30
+            expected[5] = 1 if case[0] != case[1] else 0
+            self.assertEqual(self.interpreter.memory[:30], expected)
+            self.assertEqual(5, self.interpreter.dptr)
+
+        self.run_and_check(cases, source, check)
+
+    def test_neq_16(self):
+        cases = [
+            (0, 0), (0, 1), (0, 255),
+            (1, 0), (1, 1), (1, 5), (1, 255),
+            (5, 0), (5, 1), (5, 1), (5, 255),
+            (255, 0), (255, 1), (255, 5), (255, 255),
+            (256, 0), (256, 5), (256, 256),
+            (260, 4),
+            (2557, 2557), (2557, 2558),
+            (256, 0), (256, 5), (256, 256),
+            (0, 0, 5), (0, 5, 5), (5, 0, 5), (5, 5, 5),
+            (0, 0, -5), (0, 5, -5), (5, 0, -5), (5, 5, -5),
+        ]
+
+        def source(case):
+            return f"""
+                _MDR 4
+                _ADD:16 {case[0]}
+                _NEQ:16 {case[1]} {case[2] if len(case) > 2 else 2}
+            """
+
+        def check(case):
+            expected = [0] * 30
+            expected[4] = 1 if case[0] != case[1] else 0
+            self.assertEqual(self.interpreter.memory[:30], expected)
+            self.assertEqual(4, self.interpreter.dptr)
+
+        self.run_and_check(cases, source, check)
