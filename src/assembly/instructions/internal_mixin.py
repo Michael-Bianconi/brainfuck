@@ -22,6 +22,8 @@ class InternalMixin(AssemblerMixin):
             ("_SET", ("Immediate",)): self.setcell_8,
             ("_EQL", ("Immediate", "Immediate")): self.eql_8,
             ("_NEQ", ("Immediate", "Immediate")): self.neq_8,
+            ("_AND", ("Immediate", "Immediate")): self.and_8,
+            ("_LOR", ("Immediate", "Immediate")): self.lor_8,
             ("_JFZ", ()): self.jfiz,
             ("_JBN", ()): self.jbnz,
             ("_DBG", ()): self.dbg,
@@ -35,7 +37,7 @@ class InternalMixin(AssemblerMixin):
             ("_SET:16", ("Immediate",)): self.setcell_16,
             ("_SUB:16", ("Immediate",)): self.sub_16,
             ("_EQL:16", ("Immediate", "Immediate")): self.eql_16,
-            # ("_NEQ:8", ("Immediate", "Immediate")): self.neq_16,
+            ("_NEQ:16", ("Immediate", "Immediate")): self.neq_16,
         }
 
     def mdr_8(self, immediate):
@@ -330,6 +332,74 @@ class InternalMixin(AssemblerMixin):
             _MDL {tmp}
         """)
 
+    def and_8(self, imm, tmp):
+        """
+        AND IMM TMP (LOGICAL AND 8-BIT)
+
+        BEHAVIOR:
+            1. Checks if the current cell and the cell $imm cells away
+               are both non-zero.
+            2. If both are non-zero, sets current cell to 1. If either are
+               zero, sets current cell to 0. Sets cell $imm cells away to 0.
+
+        PERFORMANCE:
+            Memory complexity: 3 cells
+            Time complexity: O(1)
+        """
+        return self.assemble(f"""
+            _JFZ
+                _MDR:8 {imm}
+                _JFZ
+                    _MDR:8 {tmp - imm}
+                    _ADD:8 1
+                    _MDR:8 {imm - tmp}
+                    _SET:8 0
+                _JBN
+                _MDL:8 {imm}
+                _SET:8 0
+            _JBN
+            _MDR:8 {imm}
+            _SET:8 0
+            _MDR:8 {tmp - imm}
+            _MOV:8 {-tmp}
+            _MDL:8 {tmp}
+        """)
+
+    def lor_8(self, imm, tmp):
+        """
+        LOR IMM TMP (LOGICAL OR 8-BIT)
+
+        BEHAVIOR:
+            1. Checks if the current cell or the cell $imm cells away
+               are non-zero.
+            2. If either are non-zero, sets current cell to 1. If both are
+               zero, sets current cell to 0. Sets cell $imm cells away to 0.
+
+        PERFORMANCE:
+            Memory complexity: 3 cells
+            Time complexity: O(1)
+        """
+        return self.assemble(f"""
+            _JFZ
+                _SET:8 0
+                _MDR:8 {imm}
+                _SET:8 0
+                _MDR:8 {tmp - imm}
+                _ADD:8 1
+                _MDL:8 {tmp}
+            _JBN
+            _MDR:8 {imm}
+            _JFZ
+                _SET:8 0
+                _MDR:8 {tmp - imm}
+                _ADD:8 1
+                _MDR:8 {imm - tmp}
+            _JBN
+            _MDR:8 {tmp - imm}
+            _MOV:8 {-tmp}
+            _MDL:8 {tmp}
+        """)
+
     def eql_16(self, imm, tmp):
         """
 
@@ -386,8 +456,8 @@ class InternalMixin(AssemblerMixin):
         return self.assemble(f"""
             _NEQ:8 {lo} {tmp}
             _MDR:8 1
-            _NEQ:8 {hi} {tmp}
+            _NEQ:8 {hi} {tmp-1}
             _MOV:8 -1
             _MDL:8 1
-            _EQL:8 2 {tmp}
+            _LOR:8 1 {tmp}
         """)

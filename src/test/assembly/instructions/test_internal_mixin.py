@@ -405,3 +405,47 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(4, self.interpreter.dptr)
 
         self.run_and_check(cases, source, check)
+
+    def test_and_8(self):
+
+        cases = [
+            (0, 0), (0, 1), (1, 0), (1, 1), (1, 255), (255, 1), (255, 255)
+        ]
+
+        def source(case):
+            return f"""
+                _ADD {case[0]}
+                _MDR:8 5
+                _ADD {case[1]}
+                _AND {-5} {-3}
+            """
+
+        def check(case):
+            expected = [0] * 30
+            expected[5] = 1 if case[0] > 0 and case[1] > 0 else 0
+            self.assertEqual(self.interpreter.memory[:30], expected)
+            self.assertEqual(5, self.interpreter.dptr)
+
+        self.run_and_check(cases, source, check)
+
+    def test_lor_8(self):
+
+        cases = [
+            (0, 0), (0, 1), (1, 0), (1, 1), (1, 255), (255, 1), (255, 255)
+        ]
+
+        def source(case):
+            return f"""
+                _ADD {case[0]}
+                _MDR:8 5
+                _ADD {case[1]}
+                _LOR {-5} {-3}
+            """
+
+        def check(case):
+            expected = [0] * 30
+            expected[5] = 1 if case[0] > 0 or case[1] > 0 else 0
+            self.assertEqual(self.interpreter.memory[:30], expected)
+            self.assertEqual(5, self.interpreter.dptr)
+
+        self.run_and_check(cases, source, check)
