@@ -1,0 +1,67 @@
+ALOC text 65536
+ALOC regs 0         # Denote start of registers for easy arithmetic later
+ALOC $pc 2          # $pc determines the next instruction to be executed
+ALOC $c0 2          # $c0 is always 0
+ALOC $c1 2          # $c1 is always 1
+ALOC $v0 2          # $v0 is reserved for the VM and should not be used
+ALOC $v1 2          # $v1 is reserved for the VM and should not be used
+
+# TODO load .bfm file into text
+
+SKIZ $c1            # Infinitely loop
+
+                    # Retrieves the instruction at the current program counter
+GETI $v0 $pc        # Store lower 16-bits of the next instruction in $v0
+ANDI $v0 0x0F       # Bitwise AND the instruction with 0x0F to get the opcode
+SKIZ $v0            # Check if opcode = 0 (HALT)
+SUBI $v0 1          # Was not 0, subtract 1
+SKIZ $v0            # Check if the opcode = 1 (LD R I)
+SUBI $v0 1          # Was not 1, subtract 1
+SKIZ $v0            # Check if opcode = 2 (ADD R I)
+HALT                # Opcode not recognized
+
+ZIKS $v0            # Opcode = 2 (ADD R I)
+GETI $v0 $pc        # Load instruction back into $v0
+ANDI $v0 0xF0       # Get register from instruction
+SHFL $v0 8          # Bit shift register value from upper bits to lower bits
+PLUS $v0 &regs      # Set $v0 to address of desired register
+GETI $v0 $v0        # Stores the value pointed at by $v0 into $v0
+COPY $v1 $pc        # Copies $pc into $v1
+PLUS $v1 2          # Add 2 to get the upper 16-bits of the instruction
+GETI $v1 $v1        # Load upper 16-bits of instruction into $v1
+PLUS $v1 $v0        # Add register's current value to provided immediate
+GETI $v0 $pc        # Load instruction back into $v0
+ANDI $v0 0xF0       # Get register from instruction
+SHFL $v0 8          # Bit shift register value from upper bits to lower bits
+PLUS $v0 &regs      # Set $v0 to address of desired register
+SETI $v0 $v1        # Set the register pointed at by $v0 to the value in $v1
+LOAD $v0 0          # Reset $v0 to 0
+LOAD $v1 0          # Reset $v1 to 0
+PLUS $pc 4          # Increment program counter by 4
+
+ZIKS $v0            # Opcode = 1 (LD R I)
+GETI $v0 $pc        # Load instruction back into $v0
+ANDI $v0 0xF0       # Get register from instruction
+SHFL $v0 8          # Bit shift register value from upper bits to lower bits
+PLUS $v0 &regs      # Set $v0 to address of desired register
+COPY $v1 $pc        # Copies $pc into $v1
+PLUS $v1 2          # Add 2 to get the upper 16-bits of the instruction
+GETI $v1 $v1        # Load upper 16-bits of instruction into $v1
+SETI $v0 $v1        # Set the register pointed at by $v0 to the value in $v1
+LOAD $v0 0          # Reset $v0 to 0
+LOAD $v1 0          # Reset $v1 to 0
+PLUS $pc 4          # Increment program counter by 4
+
+ZIKS $v0            # Opcode = 0 (HALT)
+HALT                # End program
+
+ZIKS $c1            # Infinitely loop
+
+
+
+
+
+
+
+
+

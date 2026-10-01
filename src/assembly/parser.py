@@ -78,9 +78,11 @@ class Parser:
             .set_parse_action(lambda orig, loc, result: Operand(result, "Top"))
         address = pp.Combine(pp.Suppress("@") + (immediate ^ symbol)) \
             .set_parse_action(lambda orig, loc, result: Operand(result, "Address"))
+        register = pp.Combine(pp.Suppress("$") + pp.Word(pp.nums)) \
+            .set_parse_action(lambda orig, loc, result: Operand(result, "Register"))
         string = dbl_quoted_string("String") \
             .set_parse_action(lambda orig, loc, result: Operand(result, "String"))
-        operands = pp.ZeroOrMore(pp.Group(string ^ immediate ^ symbol ^ address ^ address_of ^ top)) \
+        operands = pp.ZeroOrMore(pp.Group(string ^ immediate ^ symbol ^ address ^ address_of ^ top ^ register)) \
             .set_results_name("Operands")
         mnemonic = pp.Combine(pp.Word(pp.alphas + "_", exact=4) +
                               pp.ZeroOrMore(pp.Combine(pp.Literal(":") + pp.Word(pp.nums))))("Mnemonic")

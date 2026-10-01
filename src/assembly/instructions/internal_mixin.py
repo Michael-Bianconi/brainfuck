@@ -375,6 +375,10 @@ class InternalMixin(AssemblerMixin):
             2. If either are non-zero, sets current cell to 1. If both are
                zero, sets current cell to 0. Sets cell $imm cells away to 0.
 
+        EXAMPLE:
+            [x, y, t]
+            if x > 0
+
         PERFORMANCE:
             Memory complexity: 3 cells
             Time complexity: O(1)

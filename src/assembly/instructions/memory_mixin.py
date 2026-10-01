@@ -5,14 +5,10 @@ class MemoryMixin(AssemblerMixin):
 
     def memory_definitions(self):
         return {
-            ("ALOC:16", ("Symbol", "Immediate")): self.aloc_16,
-
             ("GETI", ("Top", "Top")): self.geti_8_top_top,
             ("GETI:16", ("Top", "Top")): self.geti_16_top_top,
 
-            ("PUSH", ("Top", "Top")): self.push_8_8_top_top,
-            ("PUSH", ("Top", "Immediate")): self.push_8_top_immediate,
-            ("PUSH", ("Top", "Address")): self.push_8_8_top_address,
+            ("PUSH", ("Top", "Address")): self.push_8_top_address,
             ("PUSH", ("Address", "Immediate")): self.push_8_address_immediate,
             ("PUSH:16", ("Top", "Top")): self.push_16_top_top,
             ("PUSH:16", ("Top", "Immediate")): self.push_16_top_immediate,
@@ -27,29 +23,9 @@ class MemoryMixin(AssemblerMixin):
             ("SETI", ("Top", "Top")): self.seti_8_8_top_top,
             ("SETI:16", ("Top", "Top", "Top")): self.seti_16_top_top_top,
 
-            ("SWAP", ("Top", "Top")): self.swap_8_8_top_top,
+            ("SWAP", ("Top", "Top")): self.swap_8_top_top,
             ("SWAP:16", ("Top", "Top")): self.swap_16_top_top,
         }
-
-    def aloc_16(self, symbol, immediate):
-        """
-        ALOC:16 (ALLOCATE 16-BIT)
-
-        Allocates space for a variable on the stack. Stores variable name in vtable.
-        Moves stack pointer to next position.
-
-        Equivalent to a PUSH, but creates a symbol for stack position.
-
-        :param symbol: Address label.
-        :param immediate: Number of 16-bit values to push onto the stack.
-        """
-        self.vtable[symbol] = self.stack_pointer
-        self.stack_pointer += immediate * 2
-        return self.assemble(f"_MDR {immediate * 2}")
-
-    def push_8_8_top_top(self, top1, top2):
-
-        return self.assemble(f"PUSH @top @{self.stack_pointer - 1}")
 
     def push_16_top_top(self, top1, top2):
         """
@@ -72,13 +48,6 @@ class MemoryMixin(AssemblerMixin):
             _ADD:16 2
         """)
 
-    def push_8_top_immediate(self, top, immediate):
-        self.stack_pointer += 1
-        return self.assemble(f"""
-             _ADD {immediate}
-             _MDR 1
-         """)
-
     def push_16_top_immediate(self, top, immediate):
         """
         PUSH @TOP IMM
@@ -100,7 +69,7 @@ class MemoryMixin(AssemblerMixin):
             _MDL:8 2
         """)
 
-    def push_8_8_top_address(self, top, address):
+    def push_8_top_address(self, top, address):
         offset = self.stack_pointer - address
         self.stack_pointer += 1
         return self.assemble(f"""
@@ -458,7 +427,7 @@ class MemoryMixin(AssemblerMixin):
             """)
         return source
 
-    def swap_8_8_top_top(self,  top1, top2):
+    def swap_8_top_top(self,  top1, top2):
         """
         Pops b off the stack. Pops a off the stack. Pushes b onto the stack. Pushes a onto the stack.
         :param bitwidth:
