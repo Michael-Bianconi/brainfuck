@@ -9,10 +9,6 @@ class ArithmeticMixin(AssemblerMixin):
             ("DIVI", ("Top", "Top", "Top")): self.divi8_top_top_top,
             ("DIVI", ("Top", "Top", "Immediate")): self.divi8_top_top_immediate,
 
-            ("SUBT", ("Top", "Top", "Top")): self.subt_8_top_top_top,
-
-            ("SUBT:16", ("Top", "Top", "Top")): self.subt_16_top_top_top,
-
             ("MODS", ("Top", "Top", "Immediate")): self.mods_8_top_top_immediate,
 
             ("MULT", ("Top", "Top", "Top")): self.mult_8_top_top_top,
@@ -176,41 +172,5 @@ class ArithmeticMixin(AssemblerMixin):
             SUBT @top @top @top
         """)
 
-    def subt_16_top_top_top(self, top1, top2, top3):
-        """
-        SUBT @TOP @TOP @TOP (SUBTRACT 16-BIT)
-
-        BEHAVIOR:
-            1. Pops the top two values off the stack. Subtracts the top value from
-               the 2nd value on the stack. Pushes the result onto the stack.
-            2. Decrements the stack pointer by 2.
-
-        EXAMPLE:
-            [0 0 5 0 3 0 6 0] > [0 0 2 0 4 0]
-        """
-        return self.assemble(f"""
-            _MOV:16 4
-            _MDL 2
-            _MOV:16 2
-            _MDR 3
-            _JFZ
-                _MDL 5
-                _SUB:16 256
-                _MDR 4
-                _SUB:16 256
-                _MDR 1
-            _JBN
-            _MDL 1
-            _JFZ      
-                _MDL:8 4
-                _SUB:16 1
-                _MDR:8 4
-                _SUB:16 1
-            _JBN
-            _MDR 4
-            _SUB:16 2
-            _MOV:16 -6
-            _MDL 6    
-        """)
 
 

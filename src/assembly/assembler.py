@@ -3,23 +3,36 @@ from src.assembly.instructions.bitwise_mixin import BitwiseMixin
 from src.assembly.instructions.comparison_mixin import ComparisonMixin
 from src.assembly.instructions.control_mixin import ControlMixin
 from src.assembly.instructions.internal_mixin import InternalMixin
-from src.assembly.instructions.memory_mixin import MemoryMixin
+from src.assembly.instructions.seti import Seti
+from src.assembly.instructions.geti import Geti
+from src.assembly.instructions.push import Push
+from src.assembly.instructions.subt import Subt
+from src.assembly.instructions.swap import Swap
+from src.assembly.instructions.load import Load
+from src.assembly.instructions.popv import Popv
 from src.assembly.parser import Parser
 
 
-class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin):
+class Assembler(InternalMixin, Popv, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
 
     def __init__(self):
         self.vtable = {}
+        self.next_allocation = 0
         self.stack_pointer = 0
         self.instructions = {}
         self.defining_func = None
         self.instructions.update(self.internal_definitions())
         self.instructions.update(self.arithmetic_definitions())
         self.instructions.update(self.comparison_definitions())
-        self.instructions.update(self.memory_definitions())
+        self.instructions.update(self.seti_definitions())
         self.instructions.update(self.control_definitions())
         self.instructions.update(self.bitwise_definitions())
+        self.instructions.update(self.geti_definitions())
+        self.instructions.update(self.push_definitions())
+        self.instructions.update(self.subt_definitions())
+        self.instructions.update(self.swap_definitions())
+        self.instructions.update(self.load_definitions())
+        self.instructions.update(self.popv_definitions())
 
     def assemble(self, source):
         parser = Parser()
@@ -30,103 +43,32 @@ class Assembler(InternalMixin, MemoryMixin, ArithmeticMixin, ComparisonMixin, Co
             parser.parse(line)
             if len(parser.lines) > 0:
                 parser.__next__()
-                if parser.mnemonic() == 'RTRN':
-                    self.defining_func = None
-                elif self.defining_func is not None:
-                    self.vtable[self.defining_func] += line + '\n'
-                else:
-                    mnemonic = parser.mnemonic()
-                    operands = [o.resolve(self.vtable) for o in parser.operands()]
-                    operand_types = tuple([o.value_type for o in parser.operands()])
-                    instruction = self.instructions[(mnemonic, operand_types)]
-                    exe = instruction(*operands)
-                    if '_' not in mnemonic:
-                        print(f"{self.stack_pointer} {line.strip()} {exe}")
-                    result += exe
+                mnemonic = parser.mnemonic()
+                operand_values = tuple([o.operand_value for o in parser.operands()])
+                operand_types = tuple([o.operand_type for o in parser.operands()])
+                instruction = self.instructions[(mnemonic, operand_types)]
+                exe = instruction(*operand_values)
+                if '_' not in mnemonic:
+                    print(f"{self.stack_pointer} {line.strip()} {exe}")
+                result += exe
         return result
 
+    def allocate(self, symbol, size):
+        self.vtable[symbol] = self.next_allocation
+        self.next_allocation += size
 
-    ###########################################################################
-    # Control Flow                                                            #
-    ###########################################################################
+    def init_vm(self, register_count, text_size):
+        source = ""
+        source += ">>" * register_count     # Space for registers
+        source += ">" * text_size           # Space for .bfm file
+        source += ">>"                      # Program counter
 
-    def if_nonzero(self):
-        """
-        Starts an if-statement. Peeks at top value on the stack. If it is non-zero, enters
-        the inner code block. If zero, skips code block. Must be paired with an end_if().
+        stack_low_bits = len(source) % 256
+        stack_high_bits = len(source) // 256
 
-        If-statement inner code block must:
-            * Have a stack-effect of 0.
-            * Must not modify the top value on the stack.
-
-        :return:
-        """
-        self.stack_pointer -= 1
-        return ''.join([
-            '<[[-]'
-        ])
-
-    def if_zero(self):
-        return ''.join([
-            self.logical_not(),
-            self.if_nonzero()
-        ])
-
-    def else_block(self):      # [5 1 | ]
-        return ''.join([        # enter else        do not enter else
-            '>+<]>',            # [0 | 0]           [0 | 1]
-            '[<+>-]<-',         # [|0 0]            [|1 0]
-            '[[-]',
-        ])
-
-    def end_if(self):
-        """
-        Ends the enclosing if-statement. Pops the if-condition off the stack.
-        :return:
-        """
-        return ''.join([
-            ']',
-        ])
-
-    def while_nonzero(self, a):
-        offset = self.stack_pointer - a
-        return ''.join([            # c ... | 0
-            self.left(offset),
-            '[',
-            self.right(offset)
-        ])
-
-    def end_while(self, a):
-        offset = self.stack_pointer - a
-        return ''.join([
-            self.left(offset),
-            '-]',
-            self.right(offset)
-        ])
-
-
-    ###########################################################################
-    # I/O Instructions                                                        #
-    ###########################################################################
-
-    def read(self, n):
-        """
-        Reads n bytes off standard input and stores in the next n bytes on the stack.
-        :param n:
-        :return:
-        """
-        self.stack_pointer += n
-        return ',>' * n
-
-    def store_instruction(self, mnemonic, operand_types, operands):
-        result = ''
-        opcode = list(self.instructions.keys()).index((mnemonic, operand_types))
-        result += self.assemble(f"PUSH @top {opcode}")
-        for operand_type, operand in zip(operand_types, operands):
-            if operand_type in ("Immediate", "Address"):
-                result += self.assemble(f"PUSH @top {operand}")
-            elif operand_type == "String":
-                result += self.assemble(f"PUSH @top")
-
-
+        source += "+" * stack_low_bits
+        source += ">"
+        source += "+" * stack_high_bits
+        source += "<"
+        return source
 

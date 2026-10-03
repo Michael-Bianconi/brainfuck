@@ -11,33 +11,33 @@ class InternalMixin(AssemblerMixin):
 
     def internal_definitions(self):
         return {
-            ("_RAW", ("String",)): self.raw,
-            ("_MDR", ("Immediate",)): self.mdr_8,
-            ("_MDL", ("Immediate",)): self.mdl_8,
-            ("_CPY", ("Immediate", "Immediate")): self.cpy_8,
-            ("_MOV", ("Immediate",)): self.mov_8,
-            ("_MMV", ("Immediate", "Immediate")): self.mmv_8,
-            ("_ADD", ("Immediate",)): self.add_8,
-            ("_SUB", ("Immediate",)): self.sub_8,
-            ("_SET", ("Immediate",)): self.setcell_8,
-            ("_EQL", ("Immediate", "Immediate")): self.eql_8,
-            ("_NEQ", ("Immediate", "Immediate")): self.neq_8,
-            ("_AND", ("Immediate", "Immediate")): self.and_8,
-            ("_LOR", ("Immediate", "Immediate")): self.lor_8,
+            ("_RAW", ("native",)): self.raw,
+            ("_MDR", ("immediate",)): self.mdr_8,
+            ("_MDL", ("immediate",)): self.mdl_8,
+            ("_CPY", ("immediate", "immediate")): self.cpy_8,
+            ("_MOV", ("immediate",)): self.mov_8,
+            ("_MMV", ("immediate", "immediate")): self.mmv_8,
+            ("_ADD", ("immediate",)): self.add_8,
+            ("_SUB", ("immediate",)): self.sub_8,
+            ("_SET", ("immediate",)): self.setcell_8,
+            ("_EQL", ("immediate", "immediate")): self.eql_8,
+            ("_NEQ", ("immediate", "immediate")): self.neq_8,
+            ("_AND", ("immediate", "immediate")): self.and_8,
+            ("_LOR", ("immediate", "immediate")): self.lor_8,
             ("_JFZ", ()): self.jfiz,
             ("_JBN", ()): self.jbnz,
             ("_DBG", ()): self.dbg,
             ("_HLT", ()): self.hlt,
 
-            ("_ADD:16", ("Immediate",)): self.add_16,
-            ("_MDL:16", ("Immediate",)): self.mdl_16,
-            ("_MOV:16", ("Immediate",)): self.mov_16,
-            ("_CPY:16", ("Immediate", "Immediate")): self.cpy_16,
-            ("_MDR:16", ("Immediate",)): self.mdr_16,
-            ("_SET:16", ("Immediate",)): self.setcell_16,
-            ("_SUB:16", ("Immediate",)): self.sub_16,
-            ("_EQL:16", ("Immediate", "Immediate")): self.eql_16,
-            ("_NEQ:16", ("Immediate", "Immediate")): self.neq_16,
+            ("_ADD:16", ("immediate",)): self.add_16,
+            ("_MDL:16", ("immediate",)): self.mdl_16,
+            ("_MOV:16", ("immediate",)): self.mov_16,
+            ("_CPY:16", ("immediate", "immediate")): self.cpy_16,
+            ("_MDR:16", ("immediate",)): self.mdr_16,
+            ("_SET:16", ("immediate",)): self.setcell_16,
+            ("_SUB:16", ("immediate",)): self.sub_16,
+            ("_EQL:16", ("immediate", "immediate")): self.eql_16,
+            ("_NEQ:16", ("immediate", "immediate")): self.neq_16,
         }
 
     def mdr_8(self, immediate):
@@ -188,8 +188,7 @@ class InternalMixin(AssemblerMixin):
         Calling this method with a large i will enable certain optimizations not available
         if a small i is used many times.
 
-        :param i: The amount to increment the current value by.
-        :param bitwidth: 8|16
+        :param immediate:
         :return:
         """
         return '+' * (immediate % 256)
@@ -199,8 +198,7 @@ class InternalMixin(AssemblerMixin):
         Calling this method with a large i will enable certain optimizations not available
         if a small i is used many times.
 
-        :param i: The amount to increment the current value by.
-        :param bitwidth: 8|16
+        :param immediate:
         :return:
         """
         result = ''
@@ -291,7 +289,7 @@ class InternalMixin(AssemblerMixin):
 
     def eql_8(self, imm, tmp):
         """
-        _EQL imm temp (EQUALS IMMEDIATE 8-BIT)
+        _EQL imm temp (EQUALS immediate 8-BIT)
         
         BEHAVIOR:
 
@@ -424,7 +422,7 @@ class InternalMixin(AssemblerMixin):
 
     def neq_8(self, imm, tmp):
         """
-        _NEQ IMM TMP (NOT EQUAL TO IMMEDIATE)
+        _NEQ IMM TMP (NOT EQUAL TO immediate)
 
         BEHAVIOR:
             1. Sets current cell to 1 if value does not equal immediate.

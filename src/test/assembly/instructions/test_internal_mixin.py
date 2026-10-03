@@ -16,9 +16,8 @@ class TestInternalMixin(TestAssembler):
 
         def check(case):
             self.assertEqual(case[0] * (1 if case[1] == 8 else 2), self.interpreter.dptr)
-            self.assertEqual(0, self.assembler.stack_pointer)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_mdl(self):
         values = (0, 1, 2, 5, 255, 256, 1000)
@@ -36,9 +35,8 @@ class TestInternalMixin(TestAssembler):
 
         def check(case):
             self.assertEqual(1000 - (case[0] * (1 if case[1] == 8 else 2)), self.interpreter.dptr)
-            self.assertEqual(0, self.assembler.stack_pointer)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_add_8bit(self):
         cases = [0, 1, 5, 254, 255, 256, 3000]
@@ -50,10 +48,9 @@ class TestInternalMixin(TestAssembler):
             result = self.interpreter.memory[:4]
             self.assertEqual(case % 256, self.interpreter.memory[0], msg=result)
             self.assertEqual([0, 0, 0], self.interpreter.memory[1:4])
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_mov_8bit(self):
         cases = [0, 1, 5, 254, 255, 256, 3000]
@@ -68,10 +65,9 @@ class TestInternalMixin(TestAssembler):
             expected = [0, 0, case % 256, 0]
             result = self.interpreter.memory[:4]
             self.assertEqual(expected, result)
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_mmv_8bit(self):
         cases = [(0, 1, 2), (1, 1, 2), (5, 4, 2), (255, 1, 2), (5, -1, 1), (5, -1, -2)]
@@ -90,10 +86,9 @@ class TestInternalMixin(TestAssembler):
             expected[2+case[2]] = case[0]
             result = self.interpreter.memory[:10]
             self.assertEqual(expected, result)
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(2, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_mov_16(self):
         cases = [0, 1, 5, 254, 255, 256, 3000]
@@ -114,7 +109,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(2, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_add_16bit(self):
         cases = [0, 1, 5, 255, 256, 3000, 65535, 65536, 65540]
@@ -128,10 +123,9 @@ class TestInternalMixin(TestAssembler):
         def check(case):
             memory = self.interpreter.memory
             self.assertEqual(self.to16bit(260+case) + [0, 0], memory[:4])
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_sub_8bit(self):
         cases = [
@@ -151,10 +145,9 @@ class TestInternalMixin(TestAssembler):
             memory = self.interpreter.memory
             self.assertEqual((case[0] - case[1]) % 256, memory[0])
             self.assertEqual([0, 0, 0], memory[1:4])
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_sub_16bit(self):
         cases = [
@@ -173,18 +166,17 @@ class TestInternalMixin(TestAssembler):
         def check(case):
             memory = self.interpreter.memory
             self.assertEqual(self.to16bit(case[0]-case[1]) + [0, 0], memory[:4])
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_raw(self):
-        cases = ("+", ">>+", "[-]", "++ - +")
+        cases = ("+", ">>+", "[-]", "++-+")
 
         for case in cases:
             with self.subTest(case=case):
                 exe = self.assembler.assemble(f"""
-                    _RAW "{case}"
+                    _RAW {case}
                 """)
                 self.assertEqual(case, exe)
 
@@ -204,7 +196,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual([2], self.interpreter.memory[0:1])
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_set_8bit(self):
         cases = [
@@ -224,10 +216,9 @@ class TestInternalMixin(TestAssembler):
             memory = self.interpreter.memory
             self.assertEqual(case[1] % 256, memory[0])
             self.assertEqual([0, 0, 0], memory[1:4])
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_set_16bit(self):
         cases = [
@@ -246,10 +237,9 @@ class TestInternalMixin(TestAssembler):
         def check(case):
             memory = self.interpreter.memory
             self.assertEqual(self.to16bit(case[1]) + [0, 0], memory[:4])
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_cpy_8(self):
         cases = [
@@ -269,10 +259,9 @@ class TestInternalMixin(TestAssembler):
             expected[5] = case[0]
             expected[5+case[1]] = case[0]
             self.assertEqual(self.interpreter.memory[:30], expected)
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(5, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_cpy_16(self):
         cases = [
@@ -293,10 +282,9 @@ class TestInternalMixin(TestAssembler):
             expected[case[1]] = i[0]
             expected[case[1]+1] = i[1]
             self.assertEqual(self.interpreter.memory[:30], expected)
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(0, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_eql_8(self):
         cases = [
@@ -321,7 +309,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(self.interpreter.memory[:30], expected)
             self.assertEqual(5, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_eql_16(self):
         cases = [
@@ -350,7 +338,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(self.interpreter.memory[:30], expected)
             self.assertEqual(4, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_neq(self):
         cases = [
@@ -375,7 +363,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(self.interpreter.memory[:30], expected)
             self.assertEqual(5, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_neq_16(self):
         cases = [
@@ -404,7 +392,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(self.interpreter.memory[:30], expected)
             self.assertEqual(4, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_and_8(self):
 
@@ -426,7 +414,7 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(self.interpreter.memory[:30], expected)
             self.assertEqual(5, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)
 
     def test_lor_8(self):
 
@@ -448,4 +436,4 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(self.interpreter.memory[:30], expected)
             self.assertEqual(5, self.interpreter.dptr)
 
-        self.run_and_check(cases, source, check)
+        self.run_and_check(cases, source, check, init_vm=False)

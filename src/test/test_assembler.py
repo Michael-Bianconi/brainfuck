@@ -8,51 +8,60 @@ from src.interpreter.optimizedinterpreter import OptimizedInterpreter
 class TestAssembler(TestCase):
 
     def setUp(self) -> None:
+        register_count = 32
+        text_size = 256
         self.assembler = Assembler()
         self.interpreter = OptimizedInterpreter()
+        self.vm_source = self.assembler.init_vm(register_count, text_size)
+        self.prog_start = (register_count * 2) + text_size + 2
 
-    def assertStackContents(self, expected_content, expected_pointer):
+    def assertRegisters(self, values):
+        register_ordinals = ["$c0", "$c1", "$v0", "$v1"]
+        actual = self.interpreter.memory[0: len(register_ordinals) * 2]
+        expected = []
+        for i in register_ordinals:
+            if i in values:
+                expected.extend(self.to16bit(values[i]))
+            else:
+                expected.extend([0, 0])
+        self.assertEqual(actual, expected, msg="Register mismatch")
+
+    def assertDataPointerAlignsWithStackPointer(self, num_bytes_pushed):
+        self.assertEqual(self.sp, self.prog_start + num_bytes_pushed, msg="Stack pointer mismatch")
+        self.assertEqual(self.dptr, self.sp, msg=f"Data pointer mismatch")
+
+    def assertStackContents(self, expected_content):
         """
-
         :param expected_content: The top n values on the stack.
-        :param expected_pointer: The position of the stack pointer.
         :return:
         """
-
-        actual_content = self.interpreter.memory[max(0, self.interpreter.dptr - len(expected_content) + 2):self.interpreter.dptr+2]
-        self.assertListEqual(actual_content, expected_content, msg=f"Expected {expected_content} got {actual_content}, dptr={self.interpreter.dptr}")
-        self.assertListEqual(self.interpreter.memory[self.interpreter.dptr+2:self.interpreter.dptr+12], [0] * 10,
-                             msg='Expected cells past stack pointer to be empty' + self.dump_interpreter())
+        actual_content = self.get_stack_contents(len(expected_content))
+        self.assertListEqual(actual_content, expected_content, msg=f"Expected stack {expected_content} got {actual_content}")
 
     def to16bit(self, i):
         lo = (i % 65536) & 0b0000000011111111
         hi = ((i % 65536) & 0b1111111100000000) >> 8
         return [lo, hi]
 
-    def dump_interpreter(self):
-        memory = ''
-        pointers = ''
-        for i in range(self.assembler.stack_pointer + 10):
-            cell = str(self.interpreter.memory[i])
-            memory += cell + ' '
-            pointers += 's' if i == self.assembler.stack_pointer else 'd' if i == self.interpreter.dptr else ' '
-            pointers += ' ' * len(cell)
+    @property
+    def dptr(self):
+        return self.interpreter.dptr
 
-        return '\n' + memory + '\n' + pointers
+    @property
+    def sp(self) -> int:
+        low = self.interpreter.memory[self.dptr]
+        high = self.interpreter.memory[self.dptr+1]
+        return (high << 8) | low
 
-    def cases_immediate8(self):
-        return [0, 1, 5, 10, 25, 255]
+    def get_stack_contents(self, n) -> list:
+        return self.interpreter.memory[max(0, self.dptr - n):self.dptr]
 
-    def cases_immediate8_immediate8(self):
-        return [
-            [0, 0], [0, 1], [1, 0], [1, 1], [5, 10], [255, 0], [0, 255], [255, 255]
-        ]
-
-    def run_and_check(self, cases, source, check):
+    def run_and_check(self, cases, source, check, init_vm=True):
         for case in cases:
             with self.subTest(values=case):
                 self.setUp()
-                exe = self.assembler.assemble(source(case))
+                exe = self.vm_source if init_vm else ""
+                exe += self.assembler.assemble(source(case))
                 self.interpreter.run(exe)
                 check(case)
 

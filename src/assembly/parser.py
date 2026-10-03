@@ -1,59 +1,69 @@
 import pyparsing as pp
-from pyparsing import ParserElement, dbl_quoted_string
+from pyparsing import ParserElement
 
 
 class Operand:
-    """
-    Operand Types:
 
-    Immediate: An integer value (e.g. 5)
-    Symbol: A string that does not start with a number, which will be associated with an address in memory
-    Address: A location in memory, either immediate (@6) or symbolic (@a)
-    Top: A special symbol denoting the top of the stack
-    Raw: Proper brainfuck code (symbols include +-[],.<>)
-
-    Note:
-        The @ in "@a" means "use the value at address a". This is in contrast to just "a", which means
-        "treat a as an immediate equal to the address itself".
-
-        Example (assume a is associated with address 20, and memory[20] = 100):
-            PUSH @top @a        # Push 100 onto the stack
-            PUSH @top &a        # Push 20 onto the stack
-            PUSH @top a         # ERROR unexpected Symbol
-    """
-
-    def __init__(self, parse_result, value_type):
-        if value_type == "String":
-            self._value = ''.join(parse_result['String'])[1:-1]
-        else:
-            self._value = parse_result[0]
-        self._value_type = value_type
-
-    def resolve(self, vtable):
-
-        # Addresses may be @0 or @a
-        if self._value_type == "Address":
-            try:
-                return int(self._value)
-            except ValueError:
-                return vtable[self._value]
-
-        # Immediates may be 5 or &a
-        elif self._value_type == "Immediate":
-            if self._value.startswith("&"):
-                return vtable[self._value[1:]]
-            else:
-                return int(self._value)
-
-        else:
-            return self._value
-
-    @property
-    def value_type(self):
-        return self._value_type
+    def __init__(self, operand_type, operand_value):
+        self.operand_type = operand_type
+        self.operand_value = operand_value
 
     def __repr__(self):
-        return f"{self._value}"
+        return f"{self.operand_value}"
+
+
+class Immediate(Operand):
+
+    def __init__(self, value):
+        super().__init__("immediate", int(value[0]))
+        self.value = value
+
+
+class Label(Operand):
+
+    def __init__(self, symbol):
+        super().__init__("label", symbol[0])
+
+
+class ProgramCounter(Operand):
+
+    def __init__(self):
+        super().__init__("$pc", "$pc")
+
+
+class StackPointer(Operand):
+
+    def __init__(self):
+        super().__init__("$sp", "$sp")
+
+
+class Register(Operand):
+
+    positions = {
+        "$c0": 0,
+        "$c1": 1,
+        "$v0": 2,
+        "$v1": 3
+    }
+
+    def __init__(self, mnemonic):
+        super().__init__("register", self)
+        self._mnemonic = mnemonic[0]
+
+    def mnemonic(self):
+        return self._mnemonic
+
+    def ordinal(self):
+        return self.positions[self._mnemonic]
+
+    def address(self):
+        return self.ordinal() * 2
+
+
+class Native(Operand):
+
+    def __init__(self, native):
+        super().__init__("native", native[0])
 
 
 class Parser:
@@ -66,29 +76,22 @@ class Parser:
     def parse(self, source: str):
         source = '\n'.join([s for s in source.splitlines() if len(s.strip()) > 0])
         ParserElement.set_default_whitespace_chars(' \t')
-        immediate = pp.Combine(
-            (pp.Opt(pp.Literal('-')) + pp.Word(pp.nums))
-            .set_parse_action(lambda o, l, r: int(''.join(r.as_list())))) \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Immediate"))
-        address_of = pp.Combine(pp.Literal("&") + ~pp.Keyword("top") + pp.Word(pp.alphas)) \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Immediate"))
-        symbol = pp.Combine(~pp.Keyword("top") + pp.common.identifier) \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Symbol"))
-        top = pp.Combine(pp.Suppress("@") + pp.Keyword("top"))("Top") \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Top"))
-        address = pp.Combine(pp.Suppress("@") + (immediate ^ symbol)) \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Address"))
-        register = pp.Combine(pp.Suppress("$") + pp.Word(pp.nums)) \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "Register"))
-        string = dbl_quoted_string("String") \
-            .set_parse_action(lambda orig, loc, result: Operand(result, "String"))
-        operands = pp.ZeroOrMore(pp.Group(string ^ immediate ^ symbol ^ address ^ address_of ^ top ^ register)) \
-            .set_results_name("Operands")
+
+        immediate = pp.Combine(pp.Optional(pp.Literal("-")) + pp.Word(pp.nums)).set_parse_action(lambda o, l, result: Immediate(result))
+        label = pp.Word(pp.alphanums).set_parse_action(lambda o, l, result: Label(result))
+        register = pp.oneOf(["$c0", "$c1", "$v0", "$v1"]).set_parse_action(lambda o, l, result: Register(result))
+        sp = pp.Keyword("$sp").set_parse_action(lambda o, l, r: StackPointer())
+        pc = pp.Keyword("$pc").set_parse_action(lambda o, l, r: ProgramCounter())
+        native = pp.Word("+-[]<>.,").set_parse_action(lambda o, l, result: Native(result))
+        operands = pp.ZeroOrMore(pp.Group(immediate ^ label ^ register ^ native ^ sp ^ pc)).set_results_name("Operands")
+
         mnemonic = pp.Combine(pp.Word(pp.alphas + "_", exact=4) +
                               pp.ZeroOrMore(pp.Combine(pp.Literal(":") + pp.Word(pp.nums))))("Mnemonic")
         comment = ("#" + pp.rest_of_line)("Comment")
         instruction = pp.Group(mnemonic + operands + pp.LineEnd())
+
         program = pp.ZeroOrMore(instruction ^ pp.Suppress(pp.LineEnd()))("Program")
+
         program.ignore(comment)
         program.set_debug(False)
 

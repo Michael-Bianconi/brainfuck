@@ -1,10 +1,9 @@
-ALOC text 65536
-ALOC regs 0         # Denote start of registers for easy arithmetic later
-ALOC $pc 2          # $pc determines the next instruction to be executed
-ALOC $c0 2          # $c0 is always 0
-ALOC $c1 2          # $c1 is always 1
-ALOC $v0 2          # $v0 is reserved for the VM and should not be used
-ALOC $v1 2          # $v1 is reserved for the VM and should not be used
+ALOC $c0 2          # Constant 0, always 0
+ALOC $c1 2          # Constant 1, always 1
+ALOC $v0 2          # VM 0, reserved for the VM and should not be used
+ALOC $v1 2          # VM 1, reserved for the VM and should not be used
+ALOC text 65536     # Program text, holds .bfm file
+ALOC $pc 2          # Program counter, holds address of next instruction
 
 # TODO load .bfm file into text
 
@@ -14,9 +13,9 @@ SKIZ $c1            # Infinitely loop
 GETI $v0 $pc        # Store lower 16-bits of the next instruction in $v0
 ANDI $v0 0x0F       # Bitwise AND the instruction with 0x0F to get the opcode
 SKIZ $v0            # Check if opcode = 0 (HALT)
-SUBI $v0 1          # Was not 0, subtract 1
+SUBT $v0 1          # Was not 0, subtract 1
 SKIZ $v0            # Check if the opcode = 1 (LD R I)
-SUBI $v0 1          # Was not 1, subtract 1
+SUBT $v0 1          # Was not 1, subtract 1
 SKIZ $v0            # Check if opcode = 2 (ADD R I)
 HALT                # Opcode not recognized
 
