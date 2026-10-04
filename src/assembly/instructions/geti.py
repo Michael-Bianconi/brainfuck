@@ -35,6 +35,7 @@ class Geti(AssemblerMixin):
         EXAMPLE:
             GETI @top @top
             [5 0 6 0 7 0 2 0 8 0] > [5 0 6 0 7 0 7 0 8 0]
+            [5 0 6 0 7 0 2 0 8 0] > [5 0 6 0 7 0 7 0 8 0]
 
         NOTES:
             1. The address MUST be a multiple of 2, and be at least 4 less than the stack pointer
@@ -61,7 +62,7 @@ class Geti(AssemblerMixin):
                         _MDP 2
                         _MOV:16 -2
                         _MDP -2
-                        _SUB:16 2
+                        _SUB:16 2 2 3
                     _JBN
                     _MDP 1
                     _JFZ
@@ -73,7 +74,7 @@ class Geti(AssemblerMixin):
                         _MDP 2
                         _MOV:16 -2
                         _MDP -2
-                        _SUB:16 2
+                        _SUB:16 2 2 3
                         _JFZ
                             _MDP -6
                             _MOV:16 8
@@ -82,7 +83,7 @@ class Geti(AssemblerMixin):
                             _MDP 2
                             _MOV:16 -2
                             _MDP -2
-                            _SUB:16 2
+                            _SUB:16 2 2 3
                         _JBN
                         _MDP 1
                     _JBN
@@ -97,7 +98,7 @@ class Geti(AssemblerMixin):
                         _MDP 8
                         _MOV:16 -8
                         _MDP -4
-                        _SUB:16 2
+                        _SUB:16 2 2 3
                     _JBN
 
                     _MDP 1
@@ -109,7 +110,7 @@ class Geti(AssemblerMixin):
                         _MDP 8
                         _MOV:16 -8
                         _MDP -4
-                        _SUB:16 2
+                        _SUB:16 2 2 3
                         _JFZ
                             _MOV:16 2
                             _MDP -2
@@ -117,7 +118,7 @@ class Geti(AssemblerMixin):
                             _MDP 8
                             _MOV:16 -8
                             _MDP -4
-                            _SUB:16 2
+                            _SUB:16 2 2 3
                         _JBN
                         _MDP 1
                     _JBN
@@ -125,5 +126,5 @@ class Geti(AssemblerMixin):
                     _MDP 8
                     _MOV:16 -8
                     _MDP -8
-                    _SUB:16 4
+                    _SUB:16 4 2 3
                 """)

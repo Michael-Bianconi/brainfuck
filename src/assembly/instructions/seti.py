@@ -46,7 +46,7 @@ class Seti(AssemblerMixin):
                 _MDP 2
                 _MOV:16 -2
                 _MDP -2
-                _SUB:16 2
+                _SUB:16 2 2 3
             _JBN
             _MDP 1
             _JFZ
@@ -59,7 +59,7 @@ class Seti(AssemblerMixin):
                 _MDP 2
                 _MOV:16 -2
                 _MDP -2
-                _SUB:16 2
+                _SUB:16 2 2 3
                 _JFZ
                     _MDP -6
                     _MOV:16 8
@@ -70,7 +70,7 @@ class Seti(AssemblerMixin):
                     _MDP 2
                     _MOV:16 -2
                     _MDP -2
-                    _SUB:16 2
+                    _SUB:16 2 2 3
                 _JBN
                 _MDP 1
             _JBN
@@ -84,7 +84,7 @@ class Seti(AssemblerMixin):
                 _MDP 6
                 _MOV:16 -8
                 _MDP -4
-                _SUB:16 2
+                _SUB:16 2 2 3
             _JBN
             _MDP 1
             _JFZ
@@ -93,20 +93,20 @@ class Seti(AssemblerMixin):
                 _MDP 6
                 _MOV:16 -8
                 _MDP -4
-                _SUB:16 2
+                _SUB:16 2 2 3
                 _JFZ
                     _MOV:16 2
                     _MDP 6
                     _MOV:16 -8
                     _MDP -4
-                    _SUB:16 2
+                    _SUB:16 2 2 3
                 _JBN
                 _MDP 1
             _JBN
             _MDP 5
             _MOV:16 -8
             _MDP -8
-            _SUB:16 6
+            _SUB:16 6 2 3
             """)
         return source
 
