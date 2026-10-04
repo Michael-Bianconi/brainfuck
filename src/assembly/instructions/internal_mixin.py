@@ -12,8 +12,7 @@ class InternalMixin(AssemblerMixin):
     def internal_definitions(self):
         return {
             ("_RAW", ("native",)): self.raw,
-            ("_MDR", ("immediate",)): self.mdr_8,
-            ("_MDL", ("immediate",)): self.mdl_8,
+            ("_MDP", ("immediate",)): self.mdp,
             ("_CPY", ("immediate", "immediate")): self.cpy_8,
             ("_MOV", ("immediate",)): self.mov_8,
             ("_MMV", ("immediate", "immediate")): self.mmv_8,
@@ -24,61 +23,29 @@ class InternalMixin(AssemblerMixin):
             ("_NEQ", ("immediate", "immediate")): self.neq_8,
             ("_AND", ("immediate", "immediate")): self.and_8,
             ("_LOR", ("immediate", "immediate")): self.lor_8,
-            ("_JFZ", ()): self.jfiz,
-            ("_JBN", ()): self.jbnz,
+            ("_JFZ", ()): self.jfz,
+            ("_JBN", ()): self.jbn,
             ("_DBG", ()): self.dbg,
             ("_HLT", ()): self.hlt,
 
             ("_ADD:16", ("immediate",)): self.add_16,
-            ("_MDL:16", ("immediate",)): self.mdl_16,
             ("_MOV:16", ("immediate",)): self.mov_16,
             ("_CPY:16", ("immediate", "immediate")): self.cpy_16,
-            ("_MDR:16", ("immediate",)): self.mdr_16,
             ("_SET:16", ("immediate",)): self.setcell_16,
-            ("_SUB:16", ("immediate",)): self.sub_16,
+            ("_SUB:16", ("immediate", "immediate", "immediate")): self.sub_16,
             ("_EQL:16", ("immediate", "immediate")): self.eql_16,
             ("_NEQ:16", ("immediate", "immediate")): self.neq_16,
         }
 
-    def mdr_8(self, immediate):
+    def mdp(self, immediate):
         """
-        MDR:8 (MOVE DATA POINTER RIGHT 8-BIT)
+        MDP (MOVE DATA POINTER)
 
         :param immediate: Moves data pointer right by immediate value.
         - If the immediate value is negative, move left.
         - If the immediate value is zero, do nothing.
         """
-        return '>' * immediate if immediate >= 0 else self.mdl_8(-immediate)
-
-    def mdr_16(self, immediate):
-        """
-        MDR:16 (MOVE DATA POINTER RIGHT 16-BIT)
-
-       :param immediate: Moves data pointer right by immediate value.
-        - If the immediate value is negative, move left.
-        - If the immediate value is zero, do nothing.
-        """
-        return '>>' * immediate if immediate >= 0 else self.mdl_16(-immediate)
-
-    def mdl_8(self, immediate):
-        """
-        MDL:8 (MOVE DATA POINTER LEFT 8-BIT)
-
-        :param immediate: Moves data pointer left by immediate value.
-        - If the immediate value is negative, move right.
-        - If the immediate value is zero, do nothing.
-        """
-        return '<' * immediate if immediate >= 0 else self.mdr_8(-immediate)
-
-    def mdl_16(self, immediate):
-        """
-        MDL:16 (MOVE DATA POINTER LEFT 16-BIT)
-
-        :param immediate: Moves data pointer left by immediate value.
-        - If the immediate value is negative, move right.
-        - If the immediate value is zero, do nothing.
-        """
-        return '<<' * immediate if immediate >= 0 else self.mdr_16(-immediate)
+        return '>' * immediate if immediate >= 0 else '<' * -immediate
 
     def mov_8(self, immediate):
         """
@@ -90,7 +57,7 @@ class InternalMixin(AssemblerMixin):
         :param immediate:
         :return:
         """
-        return f'[{self.mdr_8(immediate)}+{self.mdl_8(immediate)}-]'
+        return f'[{self.mdp(immediate)}+{self.mdp(-immediate)}-]'
 
     def mmv_8(self, imm1, imm2):
         """
@@ -102,20 +69,20 @@ class InternalMixin(AssemblerMixin):
         return self.assemble(f"""
             _JFZ
                 _SUB 1
-                _MDR {imm1}
+                _MDP {imm1 - 0}
                 _ADD 1
-                _MDR {imm2 - imm1}
+                _MDP {imm2 - imm1}
                 _ADD 1
-                _MDL {imm2}
+                _MDP {0 - imm2}
             _JBN
         """)
 
     def mov_16(self, immediate):
         return self.assemble(f"""
-            _MOV:8 {immediate}
-            _MDR:8 1
-            _MOV:8 {immediate}
-            _MDL:8 1
+            _MOV {immediate}
+            _MDP 1
+            _MOV {immediate}
+            _MDP -1
         """)
 
     def cpy_8(self, dest, temp):
@@ -134,11 +101,10 @@ class InternalMixin(AssemblerMixin):
         """
         return self.assemble(f"""
              _MMV {dest} {temp}
-             _MDR {temp}
+             _MDP {temp}
              _MOV {-temp}
-             _MDL {temp}
+             _MDP {-temp}
          """)
-
 
     def cpy_16(self, dest, temp):
         """
@@ -155,32 +121,19 @@ class InternalMixin(AssemblerMixin):
         """
 
         return self.assemble(f"""
-            _CPY:8 {dest} {temp}
-            _MDR:8 1
-            _CPY:8 {dest} {temp}
-            _MDL:8 1
+            _CPY {dest} {temp}
+            _MDP 1
+            _CPY {dest} {temp}
+            _MDP -1
         """)
 
-    def jfiz(self):
+    def jfz(self):
         """
         _JFZ (JUMP FORWARD IF ZERO)
         """
         return "["
 
-    def jfiz_16(self):
-        """
-        _JFZ (JUMP FORWARD IF ZERO 16-BIT)
-
-        Where _JFZ:8 jumps if the current cell is 0, _JFZ:16 jumps only if
-        both the current and next cells are 0.
-
-        NOTE: _JFZ:16 must always be used in conjunction with _JBN:16
-          v
-        [ 0 1 ]
-        """
-        return ">[[...]"
-
-    def jbnz(self):
+    def jbn(self):
         return "]"
 
     def add_8(self, immediate):
@@ -210,9 +163,9 @@ class InternalMixin(AssemblerMixin):
         # block by the full value of i.
         if high_add > 0:
             result += self.assemble(f"""
-                _MDR 1
+                _MDP 1
                 _ADD {high_add}
-                _MDL 1
+                _MDP -1
             """)
 
         # Add +1 to the low bits. If that causes an overflow, increment the high bits by +1.
@@ -230,25 +183,43 @@ class InternalMixin(AssemblerMixin):
     def sub_8(self, immediate):
         return '-' * (immediate % 256)
 
-    def sub_16(self, immediate):
+    def sub_16(self, immediate, carry, temp):
         high_sub = immediate // 256
         low_sub = immediate % 256
+        x = 0
+        y = 1
         result = ''
         # Save potentially billions of cycles (for very large i) by modifying the high bits directly,
         # adding 256 to the total value each time. This block can be omitted entirely by repeating the +1
         # block by the full value of i.
         if high_sub > 0:
             result += self.assemble(f"""
-                _MDR 1
+                _MDP 1
                 _SUB {high_sub}
-                _MDL 1
+                _MDP -1
             """)
-        result += ''.join([  # If x == 0         |   If x != 0           d=x
-            '[>>+>+<<<-]>>',  # [0, y, x, x]      |   [x, y, 0, 0]        d=c
-            '[<<+>>-]+>',  # [x, y, 1, x]      |   [x, y, x, x]        d=t
-            '[<->[-]]<',  # [x, y, 0, 0]      |   [x, y, 1, 0]        d=c
-            '[-<->]<<-'  # [x-1, y, 0, 0]    |   [255, y-1, 0, 0]    d=x
-        ]) * low_sub
+
+        result += self.assemble(f"""
+            _CPY {temp} {carry}         # temp = x
+            _MDP {carry}                # carry = 1
+            _ADD 1
+            _MDP {temp - carry}
+            _JFZ                        # if temp > 0: carry = 0
+                _MDP {carry - temp}
+                _SUB 1
+                _MDP {temp - carry}
+                _SET 0
+            _JBN
+            _MDP {carry - temp}
+            _JFZ                        # y = y - carry
+                _SUB 1
+                _MDP {y - carry}
+                _SUB 1
+                _MDP {carry - y}
+            _JBN
+            _MDP {x - carry}
+            _SUB 1                      # x = x - 1
+        """ * low_sub)
         return result
 
     def raw(self, value):
@@ -316,18 +287,18 @@ class InternalMixin(AssemblerMixin):
         imm = imm % 256
         return self.assemble(f"""
             _SUB {imm}
-            _MDR {tmp}
+            _MDP {tmp}
             _ADD 1
-            _MDL {tmp}
+            _MDP {-tmp}
             _JFZ
-                _MDR {tmp}
+                _MDP {tmp}
                 _SUB 1
-                _MDL {tmp}
+                _MDP {-tmp}
                 _SET 0
             _JBN
-            _MDR {tmp}
+            _MDP {tmp}
             _MOV {-tmp}
-            _MDL {tmp}
+            _MDP {-tmp}
         """)
 
     def and_8(self, imm, tmp):
@@ -346,21 +317,21 @@ class InternalMixin(AssemblerMixin):
         """
         return self.assemble(f"""
             _JFZ
-                _MDR:8 {imm}
+                _MDP {imm}
                 _JFZ
-                    _MDR:8 {tmp - imm}
-                    _ADD:8 1
-                    _MDR:8 {imm - tmp}
-                    _SET:8 0
+                    _MDP {tmp - imm}
+                    _ADD 1
+                    _MDP {imm - tmp}
+                    _SET 0
                 _JBN
-                _MDL:8 {imm}
-                _SET:8 0
+                _MDP {-imm}
+                _SET 0
             _JBN
-            _MDR:8 {imm}
-            _SET:8 0
-            _MDR:8 {tmp - imm}
-            _MOV:8 {-tmp}
-            _MDL:8 {tmp}
+            _MDP {imm}
+            _SET 0
+            _MDP {tmp - imm}
+            _MOV {-tmp}
+            _MDP {-tmp}
         """)
 
     def lor_8(self, imm, tmp):
@@ -383,23 +354,23 @@ class InternalMixin(AssemblerMixin):
         """
         return self.assemble(f"""
             _JFZ
-                _SET:8 0
-                _MDR:8 {imm}
-                _SET:8 0
-                _MDR:8 {tmp - imm}
-                _ADD:8 1
-                _MDL:8 {tmp}
+                _SET 0
+                _MDP {imm}
+                _SET 0
+                _MDP {tmp - imm}
+                _ADD 1
+                _MDP {-tmp}
             _JBN
-            _MDR:8 {imm}
+            _MDP {imm}
             _JFZ
-                _SET:8 0
-                _MDR:8 {tmp - imm}
-                _ADD:8 1
-                _MDR:8 {imm - tmp}
+                _SET 0
+                _MDP {tmp - imm}
+                _ADD 1
+                _MDP {imm - tmp}
             _JBN
-            _MDR:8 {tmp - imm}
-            _MOV:8 {-tmp}
-            _MDL:8 {tmp}
+            _MDP {tmp - imm}
+            _MOV {-tmp}
+            _MDP {-tmp}
         """)
 
     def eql_16(self, imm, tmp):
@@ -412,12 +383,12 @@ class InternalMixin(AssemblerMixin):
         lo = (imm % 65536) & 0b0000000011111111
         hi = ((imm % 65536) & 0b1111111100000000) >> 8
         return self.assemble(f"""
-            _EQL:8 {lo} {tmp}
-            _MDR:8 1
-            _EQL:8 {hi} {tmp}
-            _MOV:8 -1
-            _MDL:8 1
-            _EQL:8 2 {tmp}
+            _EQL {lo} {tmp}
+            _MDP 1
+            _EQL {hi} {tmp}
+            _MOV -1
+            _MDP -1
+            _EQL 2 {tmp}
         """)
 
     def neq_8(self, imm, tmp):
@@ -434,16 +405,16 @@ class InternalMixin(AssemblerMixin):
         """
         imm = imm % 256
         return self.assemble(f"""
-            _SUB:8 {imm}
+            _SUB {imm}
             _JFZ
-                _MDR:8 {tmp}
-                _ADD:8 1
-                _MDL:8 {tmp}
-                _SET:8 0
+                _MDP {tmp}
+                _ADD 1
+                _MDP {-tmp}
+                _SET 0
             _JBN
-            _MDR:8 {tmp}
-            _MOV:8 {-tmp}
-            _MDL:8 {tmp}
+            _MDP {tmp}
+            _MOV {-tmp}
+            _MDP {-tmp}
         """)
 
     def neq_16(self, imm, tmp):
@@ -457,10 +428,10 @@ class InternalMixin(AssemblerMixin):
         lo = (imm % 65536) & 0b0000000011111111
         hi = ((imm % 65536) & 0b1111111100000000) >> 8
         return self.assemble(f"""
-            _NEQ:8 {lo} {tmp}
-            _MDR:8 1
-            _NEQ:8 {hi} {tmp-1}
-            _MOV:8 -1
-            _MDL:8 1
-            _LOR:8 1 {tmp}
+            _NEQ {lo} {tmp}
+            _MDP 1
+            _NEQ {hi} {tmp-1}
+            _MOV -1
+            _MDP -1
+            _LOR 1 {tmp}
         """)

@@ -17,11 +17,11 @@ class Pops(AssemblerMixin):
         :return:
         """
         return self.assemble(f"""
-            _MDL 2
+            _MDP -2
             _SET:16 0
-            _MDR 2
+            _MDP 2
             _MOV:16 -2
-            _MDL 2
+            _MDP -2
             _SUB:16 2
         """)
 

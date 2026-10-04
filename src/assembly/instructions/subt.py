@@ -18,29 +18,27 @@ class Subt(AssemblerMixin):
             2. Decrements the stack pointer by 2.
 
         EXAMPLE:
+            [0 0 5 0 0 0 3 0 0 0 6 0] > [0 0 2 0 4 0]
             [0 0 5 0 3 0 6 0] > [0 0 2 0 4 0]
         """
         return self.assemble(f"""
-            _MOV:16 4
-            _MDL 2
-            _MOV:16 2
-            _MDR 3
+            _MDP -1                 # Move to high bits of y
             _JFZ
-                _MDL 5
-                _SUB:16 256
-                _MDR 4
-                _SUB:16 256
-                _MDR 1
+                _MDP -3             # Move to low bits of x
+                _SUB:16 256 6 7
+                _MDP 2              # Move to low bits of y
+                _SUB:16 256 4 5
+                _MDP 1              # Move to high bits of y
             _JBN
-            _MDL 1
+            _MDP -1                 # Move to low bits of y
             _JFZ      
-                _MDL:8 4
-                _SUB:16 1
-                _MDR:8 4
-                _SUB:16 1
+                _MDP -2             # Move to low bits of x
+                _SUB:16 1 6 7
+                _MDP 2              # Move to low bits of y
+                _SUB:16 1 4 5
             _JBN
-            _MDR 4
-            _SUB:16 2
-            _MOV:16 -6
-            _MDL 6    
+            _MDP 2                  # Move to stack pointer
+            _SUB:16 2 2 3
+            _MOV:16 -2
+            _MDP -2
         """)

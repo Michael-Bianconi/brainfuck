@@ -26,10 +26,10 @@ class Push(AssemblerMixin):
         return self.assemble(f"""
             _MOV:16 4    
             _ADD:16 {immediate}
-            _MDR:8 4
+            _MDP 4
             _ADD:16 2
             _MOV:16 -2
-            _MDL:8 2
+            _MDP -2
         """)
 
     def push_register(self, register):
@@ -57,9 +57,9 @@ class Push(AssemblerMixin):
         return self.assemble(f"""
             _CPY:16 2 4
             _SET:16 0
-            _MDL 2
+            _MDP -2
             _CPY:16 2 8
-            _MDR 4
+            _MDP 4
             _ADD:16 2
         """)
 

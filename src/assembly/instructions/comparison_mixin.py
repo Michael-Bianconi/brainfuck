@@ -98,7 +98,7 @@ class ComparisonMixin(AssemblerMixin):
         y2 = self.stack_pointer - 3
         source = self.assemble(f"""               # [x1 x2 y1 y2 | sp]           [x1 x2 x1 x2 | sp] 
             _MOV:16 4
-            _MDL 4
+            _MDP -4
             _CPY 4 5
             PUSH @top @{x1}                       # [x1 x2 y1 y2 x1 | 0]        [x1 x2 x1 x2 x1 | 0]
             PUSH @top @{y1}                       # [x1 x2 0 0 y1 y2 0 0 x1 y1 | 0]     [x1 x2 0 0 x1 x2 0 0 x1 x1 | 0]

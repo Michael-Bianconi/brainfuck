@@ -42,7 +42,7 @@ class Geti(AssemblerMixin):
         """
         return self.assemble(f"""
                     _CPY:16 2 4
-                    _MDR 2
+                    _MDP 2
                     _ADD:16 2
                     PUSH 4
                     SUBT $sp $sp $sp
@@ -52,78 +52,78 @@ class Geti(AssemblerMixin):
                     SWAP $sp $sp
                     PUSH $sp
                     _MOV:16 4
-                    _MDL 2
+                    _MDP -2
                     _JFZ
-                        _MDL 6
+                        _MDP -6
                         _MOV:16 8
-                        _MDR 4
+                        _MDP 4
                         _MOV:16 -2
-                        _MDR 2
+                        _MDP 2
                         _MOV:16 -2
-                        _MDL 2
+                        _MDP -2
                         _SUB:16 2
                     _JBN
-                    _MDR 1
+                    _MDP 1
                     _JFZ
-                        _MDL 1
-                        _MDL 6
+                        _MDP -1
+                        _MDP -6
                         _MOV:16 8
-                        _MDR 4
+                        _MDP 4
                         _MOV:16 -2
-                        _MDR 2
+                        _MDP 2
                         _MOV:16 -2
-                        _MDL 2
+                        _MDP -2
                         _SUB:16 2
                         _JFZ
-                            _MDL 6
+                            _MDP -6
                             _MOV:16 8
-                            _MDR 4
+                            _MDP 4
                             _MOV:16 -2
-                            _MDR 2
+                            _MDP 2
                             _MOV:16 -2
-                            _MDL 2
+                            _MDP -2
                             _SUB:16 2
                         _JBN
-                        _MDR 1
+                        _MDP 1
                     _JBN
-                    _MDL 1
-                    _MDL 6
+                    _MDP -1
+                    _MDP -6
                     _CPY:16 2 6
-                    _MDR 4
+                    _MDP 4
                     _JFZ
                         _MOV:16 2
-                        _MDL 2
+                        _MDP -2
                         _MOV:16 2
-                        _MDR 8
+                        _MDP 8
                         _MOV:16 -8
-                        _MDL 4
+                        _MDP -4
                         _SUB:16 2
                     _JBN
 
-                    _MDR 1
+                    _MDP 1
                     _JFZ
-                        _MDL 1
+                        _MDP -1
                         _MOV:16 2
-                        _MDL 2
+                        _MDP -2
                         _MOV:16 2
-                        _MDR 8
+                        _MDP 8
                         _MOV:16 -8
-                        _MDL 4
+                        _MDP -4
                         _SUB:16 2
                         _JFZ
                             _MOV:16 2
-                            _MDL 2
+                            _MDP -2
                             _MOV:16 2
-                            _MDR 8
+                            _MDP 8
                             _MOV:16 -8
-                            _MDL 4
+                            _MDP -4
                             _SUB:16 2
                         _JBN
-                        _MDR 1
+                        _MDP 1
                     _JBN
-                    _MDL 1
-                    _MDR 8
+                    _MDP -1
+                    _MDP 8
                     _MOV:16 -8
-                    _MDL 8
+                    _MDP -8
                     _SUB:16 4
                 """)

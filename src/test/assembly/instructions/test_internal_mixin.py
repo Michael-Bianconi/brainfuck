@@ -3,38 +3,17 @@ from src.test.test_assembler import TestAssembler
 
 class TestInternalMixin(TestAssembler):
 
-    def test_mdr(self):
-        values = (0, 1, 2, 5, 255, 256, 1000)
-        bitwidths = (8, 16)
-        cases = []
-        for value in values:
-            for bitwidth in bitwidths:
-                cases.append((value, bitwidth))
-
-        def source(case):
-            return f"_MDR:{case[1]} {case[0]}"
-
-        def check(case):
-            self.assertEqual(case[0] * (1 if case[1] == 8 else 2), self.interpreter.dptr)
-
-        self.run_and_check(cases, source, check, init_vm=False)
-
-    def test_mdl(self):
-        values = (0, 1, 2, 5, 255, 256, 1000)
-        bitwidths = (8, 16)
-        cases = []
-        for value in values:
-            for bitwidth in bitwidths:
-                cases.append((value, bitwidth))
+    def test_mdp(self):
+        cases = (-999, -1, 0, 1, 2, 5, 255, 256, 1000)
 
         def source(case):
             return f"""
-                _MDR 1000
-                _MDL:{case[1]} {case[0]}
+                _MDP 1000
+                _MDP {case}
             """
 
         def check(case):
-            self.assertEqual(1000 - (case[0] * (1 if case[1] == 8 else 2)), self.interpreter.dptr)
+            self.assertEqual(1000 + case, self.interpreter.dptr)
 
         self.run_and_check(cases, source, check, init_vm=False)
 
@@ -74,8 +53,8 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _MDR 2
-                _ADD:8 {case[0]}
+                _MDP 2
+                _ADD {case[0]}
                 _MMV {case[1]} {case[2]}
             """
 
@@ -96,17 +75,16 @@ class TestInternalMixin(TestAssembler):
         def source(case):
             return f"""
                 _ADD:16 {case}
-                _MOV:16 {4}
-                _MDR:8 {4}
-                _MOV:16 {-2}
-                _MDL:8 {2}
+                _MOV:16 4
+                _MDP 4
+                _MOV:16 -2
+                _MDP -2
             """
 
         def check(case):
             expected = [0, 0] + self.to16bit(case) + [0, 0]
             result = self.interpreter.memory[:6]
             self.assertEqual(expected, result)
-            self.assertEqual(0, self.assembler.stack_pointer)
             self.assertEqual(2, self.interpreter.dptr)
 
         self.run_and_check(cases, source, check, init_vm=False)
@@ -159,14 +137,15 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
+                _MDP 4
                 _ADD:16 {case[0]}
-                _SUB:16 {case[1]}
+                _SUB:16 {case[1]} -2 3
             """
 
         def check(case):
             memory = self.interpreter.memory
-            self.assertEqual(self.to16bit(case[0]-case[1]) + [0, 0], memory[:4])
-            self.assertEqual(0, self.interpreter.dptr)
+            self.assertEqual([0, 0, 0, 0] + self.to16bit(case[0]-case[1]) + [0, 0], memory[:8])
+            self.assertEqual(4, self.interpreter.dptr)
 
         self.run_and_check(cases, source, check, init_vm=False)
 
@@ -249,9 +228,9 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _MDR 5
-                _ADD:8 {case[0]}
-                _CPY:8 {case[1]} {case[2]}
+                _MDP 5
+                _ADD {case[0]}
+                _CPY {case[1]} {case[2]}
             """
 
         def check(case):
@@ -298,7 +277,7 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _MDR 5
+                _MDP 5
                 _ADD {case[0]}
                 _EQL {case[1]} {case[2] if len(case) > 2 else 1}
             """
@@ -327,7 +306,7 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _MDR 4
+                _MDP 4
                 _ADD:16 {case[0]}
                 _EQL:16 {case[1]} {case[2] if len(case) > 2 else 2}
             """
@@ -352,7 +331,7 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _MDR 5
+                _MDP 5
                 _ADD {case[0]}
                 _NEQ {case[1]} {case[2] if len(case) > 2 else 1}
             """
@@ -381,7 +360,7 @@ class TestInternalMixin(TestAssembler):
 
         def source(case):
             return f"""
-                _MDR 4
+                _MDP 4
                 _ADD:16 {case[0]}
                 _NEQ:16 {case[1]} {case[2] if len(case) > 2 else 2}
             """
@@ -403,7 +382,7 @@ class TestInternalMixin(TestAssembler):
         def source(case):
             return f"""
                 _ADD {case[0]}
-                _MDR:8 5
+                _MDP 5
                 _ADD {case[1]}
                 _AND {-5} {-3}
             """
@@ -425,7 +404,7 @@ class TestInternalMixin(TestAssembler):
         def source(case):
             return f"""
                 _ADD {case[0]}
-                _MDR:8 5
+                _MDP 5
                 _ADD {case[1]}
                 _LOR {-5} {-3}
             """

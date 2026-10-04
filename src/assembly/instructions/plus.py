@@ -26,27 +26,27 @@ class Plus(AssemblerMixin):
         """
         return self.assemble(f"""
             _MOV:16 4
-            _MDL 2
+            _MDP -2
             _MOV:16 2
-            _MDR 3
+            _MDP 3
             _JFZ
-                _MDL 5
+                _MDP -5
                 _ADD:16 256
-                _MDR 4
+                _MDP 4
                 _SUB:16 256
-                _MDR 1
+                _MDP 1
             _JBN
-            _MDL 1
+            _MDP -1
             _JFZ      
-                _MDL:8 4
+                _MDP -4
                 _ADD:16 1
-                _MDR:8 4
+                _MDP:8 4
                 _SUB:16 1
             _JBN
-            _MDR 4
+            _MDP 4
             _SUB:16 2
             _MOV:16 -6
-            _MDL 6
+            _MDP -6
         """)
 
     def plus_sp_immediate(self, sp, immediate):

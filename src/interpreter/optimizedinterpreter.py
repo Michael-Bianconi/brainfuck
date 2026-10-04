@@ -1,6 +1,6 @@
 import sys
 
-from src.parsers.brainfuckparser import BrainfuckParser
+from src.parsers.brainfuck_optimizer import BrainfuckOptimizer
 
 
 class OptimizedInterpreter:
@@ -16,7 +16,7 @@ class OptimizedInterpreter:
         self.cycles = 0
 
     def run(self, source, debug=False):
-        self.source = BrainfuckParser.run(source)
+        self.source = BrainfuckOptimizer.run(source)
         self.instruction_count = len(self.source)
 
         try:

@@ -18,9 +18,9 @@ class Neql(AssemblerMixin):
         immediate, push 1 onto the stack.
         """
         return self.assemble(f"""
-            _MDL 2
+            _MDP -2
             _NEQ:16 {imm} 4
-            _MDR 2
+            _MDP 2
         """)
 
     def neql_rt_imm(self, rt, imm):

@@ -27,7 +27,7 @@ class Seti(AssemblerMixin):
         """
         source = self.assemble(f"""
             _CPY:16 2 4
-            _MDR 2
+            _MDP 2
             _ADD:16 2
             PUSH 6
             SUBT $sp $sp $sp
@@ -35,77 +35,77 @@ class Seti(AssemblerMixin):
             SUBT $sp $sp $sp
             PUSH $sp
             _MOV:16 2
-            _MDL 2
+            _MDP -2
             _JFZ
-                _MDL 6
+                _MDP -6
                 _MOV:16 8
-                _MDR 2
+                _MDP 2
                 _MOV:16 -2
-                _MDR 2
+                _MDP 2
                 _MOV:16 -2
-                _MDR 2
+                _MDP 2
                 _MOV:16 -2
-                _MDL 2
+                _MDP -2
                 _SUB:16 2
             _JBN
-            _MDR 1
+            _MDP 1
             _JFZ
-                _MDL 7
+                _MDP -7
                 _MOV:16 8
-                _MDR 2
+                _MDP 2
                 _MOV:16 -2
-                _MDR 2
+                _MDP 2
                 _MOV:16 -2
-                _MDR 2
+                _MDP 2
                 _MOV:16 -2
-                _MDL 2
+                _MDP -2
                 _SUB:16 2
                 _JFZ
-                    _MDL 6
+                    _MDP -6
                     _MOV:16 8
-                    _MDR 2
+                    _MDP 2
                     _MOV:16 -2
-                    _MDR 2
+                    _MDP 2
                     _MOV:16 -2
-                    _MDR 2
+                    _MDP 2
                     _MOV:16 -2
-                    _MDL 2
+                    _MDP -2
                     _SUB:16 2
                 _JBN
-                _MDR 1
+                _MDP 1
             _JBN
-            _MDL 7
+            _MDP -7
             _SET:16 0
-            _MDR 2
+            _MDP 2
             _MOV:16 -2
-            _MDR 2
+            _MDP 2
             _JFZ
                 _MOV:16 2
-                _MDR 6
+                _MDP 6
                 _MOV:16 -8
-                _MDL 4
+                _MDP -4
                 _SUB:16 2
             _JBN
-            _MDR 1
+            _MDP 1
             _JFZ
-                _MDL 1
+                _MDP -1
                 _MOV:16 2
-                _MDR 6
+                _MDP 6
                 _MOV:16 -8
-                _MDL 4
+                _MDP -4
                 _SUB:16 2
                 _JFZ
                     _MOV:16 2
-                    _MDR 6
+                    _MDP 6
                     _MOV:16 -8
-                    _MDL 4
+                    _MDP -4
                     _SUB:16 2
                 _JBN
-                _MDR 1
+                _MDP 1
             _JBN
-            _MDR 5
+            _MDP 5
             _MOV:16 -8
-            _MDL 8
+            _MDP -8
             _SUB:16 6
             """)
         return source

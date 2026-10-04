@@ -20,11 +20,11 @@ class Swap(AssemblerMixin):
             [0 0 4 0 3 0 6 0] > [0 0 3 0 4 0 6 0]
         """
         return self.assemble(f"""
-            _MDL 2
+            _MDP -2
             _MOV:16 4
-            _MDL 2
+            _MDP -2
             _MOV:16 2
-            _MDR 6
+            _MDP 6
             _MOV:16 -6
-            _MDL 2
+            _MDP -2
         """)

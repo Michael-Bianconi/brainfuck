@@ -1,13 +1,15 @@
+from typing import List
+
 from pyparsing import ZeroOrMore, OneOrMore, Literal, Suppress, Or
 
 
-class BrainfuckParser:
+class BrainfuckOptimizer:
     """
     This parser consumes Brainfuck source and produces Optimized Brainfuck (OBF) instructions.
     """
 
     @staticmethod
-    def run(source):
+    def run(source) -> list:
 
         mdp = (OneOrMore(Literal(">")) | OneOrMore(Literal("<"))) \
             .set_parse_action(lambda t: OBFToken("mdp", [len(t) * (1 if t[0] == ">" else -1)]))

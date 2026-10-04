@@ -5,6 +5,7 @@ from src.assembly.instructions.control_mixin import ControlMixin
 from src.assembly.instructions.internal_mixin import InternalMixin
 from src.assembly.instructions.seti import Seti
 from src.assembly.instructions.band import Band
+from src.assembly.instructions.bshr import Bshr
 from src.assembly.instructions.geti import Geti
 from src.assembly.instructions.push import Push
 from src.assembly.instructions.subt import Subt
@@ -17,7 +18,7 @@ from src.assembly.instructions.sifz import Sifz
 from src.assembly.parser import Parser
 
 
-class Assembler(InternalMixin, Band, Neql, Sifz, Plus, Pops, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
+class Assembler(InternalMixin, Bshr, Band, Neql, Sifz, Plus, Pops, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
 
     def __init__(self):
         self.vtable = {}
@@ -32,6 +33,7 @@ class Assembler(InternalMixin, Band, Neql, Sifz, Plus, Pops, Seti, Load, Arithme
         self.instructions.update(self.control_definitions())
         self.instructions.update(self.bitwise_definitions())
         self.instructions.update(self.band_definitions())
+        self.instructions.update(self.bshr_definitions())
         self.instructions.update(self.geti_definitions())
         self.instructions.update(self.push_definitions())
         self.instructions.update(self.subt_definitions())
