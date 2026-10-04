@@ -4,16 +4,20 @@ from src.assembly.instructions.comparison_mixin import ComparisonMixin
 from src.assembly.instructions.control_mixin import ControlMixin
 from src.assembly.instructions.internal_mixin import InternalMixin
 from src.assembly.instructions.seti import Seti
+from src.assembly.instructions.band import Band
 from src.assembly.instructions.geti import Geti
 from src.assembly.instructions.push import Push
 from src.assembly.instructions.subt import Subt
 from src.assembly.instructions.swap import Swap
 from src.assembly.instructions.load import Load
-from src.assembly.instructions.popv import Popv
+from src.assembly.instructions.pops import Pops
+from src.assembly.instructions.plus import Plus
+from src.assembly.instructions.neql import Neql
+from src.assembly.instructions.sifz import Sifz
 from src.assembly.parser import Parser
 
 
-class Assembler(InternalMixin, Popv, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
+class Assembler(InternalMixin, Band, Neql, Sifz, Plus, Pops, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
 
     def __init__(self):
         self.vtable = {}
@@ -27,12 +31,16 @@ class Assembler(InternalMixin, Popv, Seti, Load, ArithmeticMixin, ComparisonMixi
         self.instructions.update(self.seti_definitions())
         self.instructions.update(self.control_definitions())
         self.instructions.update(self.bitwise_definitions())
+        self.instructions.update(self.band_definitions())
         self.instructions.update(self.geti_definitions())
         self.instructions.update(self.push_definitions())
         self.instructions.update(self.subt_definitions())
         self.instructions.update(self.swap_definitions())
         self.instructions.update(self.load_definitions())
-        self.instructions.update(self.popv_definitions())
+        self.instructions.update(self.pops_definitions())
+        self.instructions.update(self.plus_definitions())
+        self.instructions.update(self.neql_definitions())
+        self.instructions.update(self.sifz_definitions())
 
     def assemble(self, source):
         parser = Parser()

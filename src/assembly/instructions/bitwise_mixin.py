@@ -5,8 +5,6 @@ class BitwiseMixin(AssemblerMixin):
 
     def bitwise_definitions(self):
         return {
-            ('BAND', ('Top', "Top", "Top")): self.band8_top_top_top,
-
             ('BIOR', ('Top', "Top", "Top")): self.bior8_top_top_top,
 
             ("LSFT", ("Top", "Top", "Immediate")): self.lsft8_top_top_immediate,

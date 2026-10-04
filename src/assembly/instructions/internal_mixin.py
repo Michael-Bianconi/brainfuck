@@ -448,6 +448,7 @@ class InternalMixin(AssemblerMixin):
 
     def neq_16(self, imm, tmp):
         """
+        NEQ:16 (NOT EQUAL 16-BIT)
 
         :param imm:
         :param tmp:
