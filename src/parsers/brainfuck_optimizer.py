@@ -1,6 +1,6 @@
 from typing import List
 
-from pyparsing import ZeroOrMore, OneOrMore, Literal, Suppress, Or, FollowedBy, Forward, PrecededBy
+from pyparsing import ZeroOrMore, OneOrMore, Literal, Suppress, Or, FollowedBy, Forward, PrecededBy, ParseResults
 
 
 class BrainfuckOptimizer:
@@ -54,9 +54,13 @@ class BrainfuckOptimizer:
         mmv = ((jfz + mdp('first') + Literal('+') + mdp('second') + Literal('+') + mdp('third') + Literal('-') + jbn) |
               (jfz + Literal('-') + mdp('first') + Literal('+') + mdp('second') + Literal('+') + mdp('third') + jbn)) \
             .add_condition(lambda t: sum([t['first'].args[0], t['second'].args[0], t['third'].args[0]]) == 0) \
-            .add_parse_action(lambda t: OBFToken('mmv', [t['first'].args[0], t['second'].args[0]]))
+            .add_parse_action(lambda t: OBFToken('mmv', [t['first'].args[0], t['first'].args[0] + t['second'].args[0]]))
 
-        program <<= ZeroOrMore(mmv | mov | res | mdp | inc | jfz | jbn | dbg)
+        cpy = (mdp + res + mdp + mmv + mdp + mov + mdp) \
+            .add_condition(lambda t: t[0].args[0] == -t[2].args[0] == t[3].args[1] == t[4].args[0] == -t[5].args[0] == -t[6].args[0]) \
+            .add_parse_action(lambda t: OBFToken('cpy', t[3].args))
+
+        program <<= ZeroOrMore(cpy | mmv | mov | res | mdp | inc | jfz | jbn | dbg)
 
         result = program.parse_string(source).as_list()
         BrainfuckOptimizer.resolve_jumps(result)

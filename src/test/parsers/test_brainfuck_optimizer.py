@@ -1,11 +1,13 @@
 from unittest import TestCase
 
+from src.assembly.assembler import Assembler
 from src.parsers.brainfuck_optimizer import BrainfuckOptimizer, OBFToken
 
 
 class TestBrainfuckOptimizer(TestCase):
 
     def setUp(self) -> None:
+        self.assembler = Assembler()
         self.parser = BrainfuckOptimizer()
 
     def test_mmv(self):
@@ -53,3 +55,17 @@ class TestBrainfuckOptimizer(TestCase):
                 expected = BrainfuckOptimizer.load_bfo(case[1])
                 result = BrainfuckOptimizer.run(case[0])
                 self.assertListEqual(result, expected)
+
+    def test_cpy(self):
+        cases = [
+            (self.assembler.assemble("_CPY 3 5"), "cpy 3 5"),
+            (self.assembler.assemble("_CPY -1 1000"), "cpy -1 1000"),
+            (self.assembler.assemble("_CPY 2 -4"), "cpy 2 -4"),
+            (self.assembler.assemble("_CPY -3 5"), "cpy -3 5"),
+        ]
+
+        for case in cases:
+            with self.subTest(values=case):
+                expected = BrainfuckOptimizer.load_bfo(case[1])
+                result = BrainfuckOptimizer.run(case[0])
+                self.assertListEqual(result, expected, msg=case[0])

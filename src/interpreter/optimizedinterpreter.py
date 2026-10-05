@@ -39,8 +39,11 @@ class OptimizedInterpreter:
                     self.memory[self.dptr] = 0
                 elif op.operator == 'mmv':
                     self.memory[self.dptr + op.args[0]] = (self.memory[self.dptr + op.args[0]] + self.memory[self.dptr]) % 256
-                    self.memory[self.dptr + op.args[0] + op.args[1]] = (self.memory[self.dptr + op.args[0] + op.args[1]] + self.memory[self.dptr]) % 256
+                    self.memory[self.dptr + op.args[1]] = (self.memory[self.dptr + op.args[1]] + self.memory[self.dptr]) % 256
                     self.memory[self.dptr] = 0
+                elif op.operator == 'cpy':
+                    self.memory[self.dptr + op.args[0]] = self.memory[self.dptr] % 256
+                    self.memory[self.dptr + op.args[1]] = 0
                 elif op.operator == '.':
                     print(chr(self.memory[self.dptr]), flush=True, end='')
                 elif op.operator == ',':
