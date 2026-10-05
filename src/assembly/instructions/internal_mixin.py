@@ -97,9 +97,12 @@ class InternalMixin(AssemblerMixin):
                      2 cells to the right). Must be 0.
         :param temp: The location to use as temporary storage, expressed
                      as a delta from the current data pointer (e.g. 2 means
-                     2 cells to the right). Must be 0.
+                     2 cells to the right). Will be set to 0.
         """
         return self.assemble(f"""
+             _MDP {temp}
+             _SET 0
+             _MDP {-temp}
              _MMV {dest} {temp}
              _MDP {temp}
              _MOV {-temp}

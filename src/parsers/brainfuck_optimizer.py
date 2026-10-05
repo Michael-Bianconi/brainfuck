@@ -1,6 +1,6 @@
 from typing import List
 
-from pyparsing import ZeroOrMore, OneOrMore, Literal, Suppress, Or
+from pyparsing import ZeroOrMore, OneOrMore, Literal, Suppress, Or, FollowedBy, Forward, PrecededBy
 
 
 class BrainfuckOptimizer:
@@ -9,7 +9,24 @@ class BrainfuckOptimizer:
     """
 
     @staticmethod
+    def load_bfo(bfo: str) -> list:
+        result = []
+        for line in bfo.splitlines():
+            line = line.strip()
+            if line.isspace():
+                continue
+            try:
+                operator, *args = line.split()
+                args = list(map(int, args))
+                result.append(OBFToken(operator, args))
+            except ValueError:
+                print(line)
+        return result
+
+    @staticmethod
     def run(source) -> list:
+
+        program = Forward()
 
         mdp = (OneOrMore(Literal(">")) | OneOrMore(Literal("<"))) \
             .set_parse_action(lambda t: OBFToken("mdp", [len(t) * (1 if t[0] == ">" else -1)]))
@@ -26,7 +43,7 @@ class BrainfuckOptimizer:
         # 1. [>>>+<<<-]
         # 2. [<<+>>-]
         # 3. [->>>+<<<]
-        mov = ((jfz + mdp('first') + Literal('+') + mdp('second') + Literal('-') + jbn) | \
+        mov = ((jfz + mdp('first') + Literal('+') + mdp('second') + Literal('-') + jbn) |
               (jfz + Literal('-') + mdp('first') + Literal('+') + mdp('second') + jbn)) \
             .add_condition(lambda t: t['first'].args[0] + t['second'].args[0] == 0) \
             .add_parse_action(lambda t: OBFToken('mov', [t['first'].args[0]]))
@@ -34,14 +51,33 @@ class BrainfuckOptimizer:
         # [->>>+>+<<<<]
         # [>>>+>+<<<<-]
         # [-<<+>+>]
-        mmv = ((jfz + mdp('first') + Literal('+') + mdp('second') + Literal('+') + mdp('third') + Literal('-') + jbn) | \
+        mmv = ((jfz + mdp('first') + Literal('+') + mdp('second') + Literal('+') + mdp('third') + Literal('-') + jbn) |
               (jfz + Literal('-') + mdp('first') + Literal('+') + mdp('second') + Literal('+') + mdp('third') + jbn)) \
             .add_condition(lambda t: sum([t['first'].args[0], t['second'].args[0], t['third'].args[0]]) == 0) \
             .add_parse_action(lambda t: OBFToken('mmv', [t['first'].args[0], t['second'].args[0]]))
 
-        program = ZeroOrMore(mmv | mov | res | mdp | inc | jfz | jbn | dbg)
+        program <<= ZeroOrMore(mmv | mov | res | mdp | inc | jfz | jbn | dbg)
 
-        return program.parse_string(source).as_list()
+        result = program.parse_string(source).as_list()
+        BrainfuckOptimizer.resolve_jumps(result)
+
+        return result
+
+    @staticmethod
+    def resolve_jumps(program):
+        for i in range(len(program)):
+            if program[i].operator == "jfz":
+                counter = 0
+                for j in range(i, len(program)):
+                    if program[j].operator == "jfz":
+                        counter += 1
+                    elif program[j].operator == "jbn":
+                        counter -= 1
+                    if counter == 0:
+                        program[i].args = [j-i]
+                        program[j].args = [j-i]
+                        break
+
 
 
 class OBFToken:

@@ -24,10 +24,10 @@ class OptimizedInterpreter:
                 op = self.source[self.iptr]
                 if op.operator == 'jfz':
                     if self.memory[self.dptr] == 0:
-                        self._jump()
+                        self.iptr += op.args[0]
                 elif op.operator == 'jbn':
                     if self.memory[self.dptr] != 0:
-                        self._jump()
+                        self.iptr -= op.args[0]
                 elif op.operator == 'inc':
                     self.memory[self.dptr] = (self.memory[self.dptr] + op.args[0]) % 256
                 elif op.operator == 'mdp':
@@ -67,17 +67,3 @@ class OptimizedInterpreter:
             print(f"ERROR DUMP i=[{'{:4d}'.format(self.iptr)}] d=[{'{:4d}'.format(self.dptr)}]")
             raise e
 
-    def _jump(self):
-        direction = 1 if self.source[self.iptr].operator == 'jfz' else -1
-        bracketcounter = direction
-        self.iptr += direction
-
-        while bracketcounter != 0:
-            if self.source[self.iptr].operator == 'jfz':
-                bracketcounter += 1
-            elif self.source[self.iptr].operator == 'jbn':
-                bracketcounter -= 1
-
-            self.iptr += direction
-
-        self.iptr -= direction

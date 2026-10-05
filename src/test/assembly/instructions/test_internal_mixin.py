@@ -150,7 +150,7 @@ class TestInternalMixin(TestAssembler):
         self.run_and_check(cases, source, check, init_vm=False)
 
     def test_raw(self):
-        cases = ("+", ">>+", "[-]", "++-+")
+        cases = ("+", ">>+", "[-]", "++-+", "+[>++<-]")
 
         for case in cases:
             with self.subTest(case=case):
