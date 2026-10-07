@@ -22,7 +22,7 @@ class Pops(AssemblerMixin):
             _MDP 2
             _MOV:16 -2
             _MDP -2
-            _SUB:16 2
+            _SUB:16 2 2 3
         """)
 
     def pops_rt(self, rt):

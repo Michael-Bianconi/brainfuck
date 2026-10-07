@@ -87,3 +87,27 @@ class TestParser(TestCase):
         PUSH @top @top @top
         """
         self.parser.parse(source)
+
+    def test_label(self):
+        source = f"""
+        PUSH 5 6 7
+        inlinelabel: PUSH 6
+        sololabel:
+        PUSH 7
+        """
+        gen = self.parser.parse(source)
+
+        gen.__next__()
+        self.assertListEqual(["PUSH", 5, 6, 7], [self.parser.mnemonic()] + [o.operand_value for o in self.parser.operands()])
+
+        gen.__next__()
+        self.assertEqual("inlinelabel", self.parser.label_declaration())
+
+        gen.__next__()
+        self.assertListEqual(["PUSH", 6], [self.parser.mnemonic()] + [o.operand_value for o in self.parser.operands()])
+
+        gen.__next__()
+        self.assertEqual("sololabel", self.parser.label_declaration())
+
+        gen.__next__()
+        self.assertListEqual(["PUSH", 7], [self.parser.mnemonic()] + [o.operand_value for o in self.parser.operands()])

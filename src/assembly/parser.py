@@ -1,5 +1,15 @@
 import pyparsing as pp
-from pyparsing import ParserElement
+from pyparsing import ParserElement, ParseException
+
+
+class Instruction:
+
+    def __init__(self, result):
+        self.mnemonic = result[0]["Mnemonic"]
+        self.operands = [o[0] for o in result[0]["Operands"]]
+
+    def __repr__(self):
+        return f"{self.mnemonic} {self.operands}"
 
 
 class Operand:
@@ -79,55 +89,47 @@ class Parser:
 
         immediate = pp.Combine(pp.Optional(pp.Literal("-")) + pp.Word(pp.nums)).set_parse_action(lambda o, l, result: Immediate(result))
         label = pp.Word(pp.alphanums).set_parse_action(lambda o, l, result: Label(result))
+        label_declaration = (label + pp.Suppress(":")).set_results_name("LabelDeclaration")
         register = pp.oneOf(["$c0", "$c1", "$v0", "$v1"]).set_parse_action(lambda o, l, result: Register(result))
         sp = pp.Keyword("$sp").set_parse_action(lambda o, l, r: StackPointer())
         pc = pp.Keyword("$pc").set_parse_action(lambda o, l, r: ProgramCounter())
         native = pp.Word("+-[]<>.,").set_parse_action(lambda o, l, result: Native(result))
         operands = pp.ZeroOrMore(pp.Group(immediate ^ label ^ register ^ native ^ sp ^ pc)).set_results_name("Operands")
 
-        mnemonic = pp.Combine(pp.Word(pp.alphas + "_", exact=4) +
-                              pp.ZeroOrMore(pp.Combine(pp.Literal(":") + pp.Word(pp.nums))))("Mnemonic")
+        mnemonic = pp.Combine(pp.Word(pp.alphas + "_", exact=4) + pp.Optional(pp.Literal(":8") ^ pp.Literal(":16")))("Mnemonic")
         comment = ("#" + pp.rest_of_line)("Comment")
-        instruction = pp.Group(mnemonic + operands + pp.LineEnd())
+        instruction = pp.Group(mnemonic + operands).set_parse_action(lambda o, l, result: Instruction(result))
+        line = (label_declaration ^ (label_declaration + instruction) ^ instruction) + pp.Suppress(pp.lineEnd)
 
-        program = pp.ZeroOrMore(instruction ^ pp.Suppress(pp.LineEnd()))("Program")
+        program = pp.ZeroOrMore(line ^ pp.Suppress(pp.LineEnd()))("Program")
 
         program.ignore(comment)
         program.set_debug(False)
 
-        self.lines = program.parse_string(source, parse_all=True)
+        try:
+            self.lines = program.parse_string(source, parse_all=True)
+        except ParseException as e:
+            raise RuntimeError(source, e)
+        except IndexError as e:
+            raise RuntimeError(source, e)
         self.index = 0
 
         return self
 
     def mnemonic(self) -> str:
-        parts = self._current["Mnemonic"].split(":")
-        name = parts[0]
-        bitwidths = parts[1:]
-
-        # 1. No params → return name
-        if not bitwidths:
-            return name
-
-        # 2. All params are "8" → return name
-        if all(p == "8" for p in bitwidths):
-            return name
-
-        # 3. All params are "16" → return name:16
-        if all(p == "16" for p in bitwidths):
-            return f"{name}:16"
-
-        # 4. Otherwise → original string
-        return self._current["Mnemonic"]
+        return self._current.mnemonic
 
     def operand_count(self) -> int:
-        return len(self._current["Operands"])
+        return len(self._current.operands)
 
     def operands(self):
-        return [o[0] for o in self._current["Operands"]]
+        return self._current.operands
 
-    def dump(self):
-        return self._current.dump()
+    def label_declaration(self):
+        if isinstance(self._current, Label):
+            return self._current.operand_value
+        else:
+            return None
 
     def __iter__(self):
         return self

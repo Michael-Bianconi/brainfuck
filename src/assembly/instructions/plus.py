@@ -33,7 +33,7 @@ class Plus(AssemblerMixin):
                 _MDP -5
                 _ADD:16 256
                 _MDP 4
-                _SUB:16 256
+                _SUB:16 256 2 3
                 _MDP 1
             _JBN
             _MDP -1
@@ -41,10 +41,10 @@ class Plus(AssemblerMixin):
                 _MDP -4
                 _ADD:16 1
                 _MDP:8 4
-                _SUB:16 1
+                _SUB:16 1 2 3
             _JBN
             _MDP 4
-            _SUB:16 2
+            _SUB:16 2 2 3
             _MOV:16 -6
             _MDP -6
         """)
@@ -84,5 +84,5 @@ class Plus(AssemblerMixin):
             PUSH {rt.mnemonic()}
             PUSH {imm}
             PLUS $sp $sp
-            POPV {rt.mnemonic()}
+            POPS {rt.mnemonic()}
         """)

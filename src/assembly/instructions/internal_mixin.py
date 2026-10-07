@@ -23,6 +23,7 @@ class InternalMixin(AssemblerMixin):
             ("_NEQ", ("immediate", "immediate")): self.neq_8,
             ("_AND", ("immediate", "immediate")): self.and_8,
             ("_LOR", ("immediate", "immediate")): self.lor_8,
+            ("_SOA", ("immediate",)): self.soa,
             ("_JFZ", ()): self.jfz,
             ("_JBN", ()): self.jbn,
             ("_DBG", ()): self.dbg,
@@ -438,3 +439,6 @@ class InternalMixin(AssemblerMixin):
             _MDP -1
             _LOR 1 {tmp}
         """)
+
+    def soa(self, imm):
+        return (".>" * imm) + ("<" * imm)

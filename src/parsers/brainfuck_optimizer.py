@@ -38,6 +38,7 @@ class BrainfuckOptimizer:
         jbn = Literal(']').set_parse_action(lambda t: OBFToken('jbn', []))
         dbg = Literal('#').set_parse_action(lambda t: OBFToken('dbg', []))
         res = Literal('[-]').set_parse_action(lambda t: OBFToken('res', []))
+        soa = Literal('.').set_parse_action(lambda t: OBFToken('soa', []))
 
         # Matches on a conventional _MOV instruction, such as:
         # 1. [>>>+<<<-]
@@ -60,7 +61,7 @@ class BrainfuckOptimizer:
             .add_condition(lambda t: t[0].args[0] == -t[2].args[0] == t[3].args[1] == t[4].args[0] == -t[5].args[0] == -t[6].args[0]) \
             .add_parse_action(lambda t: OBFToken('cpy', t[3].args))
 
-        program <<= ZeroOrMore(cpy | mmv | mov | res | mdp | inc | jfz | jbn | dbg)
+        program <<= ZeroOrMore(cpy | mmv | mov | res | mdp | inc | jfz | jbn | dbg | soa)
 
         result = program.parse_string(source).as_list()
         BrainfuckOptimizer.resolve_jumps(result)

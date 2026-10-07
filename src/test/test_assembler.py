@@ -1,3 +1,4 @@
+from io import StringIO
 from unittest import TestCase
 
 from src.assembly.assembler import Assembler
@@ -11,9 +12,14 @@ class TestAssembler(TestCase):
         register_count = 32
         text_size = 256
         self.assembler = Assembler()
-        self.interpreter = OptimizedInterpreter()
+        self.interpreter = OptimizedInterpreter(stdout=StringIO())
         self.vm_source = self.assembler.init_vm(register_count, text_size)
         self.prog_start = (register_count * 2) + text_size + 2
+
+    def assertStdout(self, expected):
+        self.interpreter.stdout.seek(0)
+        actual = self.interpreter.stdout.read()
+        self.assertEqual(actual, expected, msg="Standard output mismatch")
 
     def assertRegisters(self, values):
         register_ordinals = ["$c0", "$c1", "$v0", "$v1"]

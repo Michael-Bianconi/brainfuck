@@ -5,7 +5,7 @@ from src.parsers.brainfuck_optimizer import BrainfuckOptimizer
 
 class OptimizedInterpreter:
 
-    def __init__(self, memsize=30000):
+    def __init__(self, memsize=30000, stdout=sys.stdout):
         self.source = []
         self.instruction_count = 0
         self.memory = [0 for _ in range(memsize)]
@@ -14,6 +14,7 @@ class OptimizedInterpreter:
         self.openbrackets = {}
         self.closebrackets = {}
         self.cycles = 0
+        self.stdout = stdout
 
     def run(self, source, debug=False):
         self.source = BrainfuckOptimizer.run(source)
@@ -44,8 +45,9 @@ class OptimizedInterpreter:
                 elif op.operator == 'cpy':
                     self.memory[self.dptr + op.args[0]] = self.memory[self.dptr] % 256
                     self.memory[self.dptr + op.args[1]] = 0
-                elif op.operator == '.':
-                    print(chr(self.memory[self.dptr]), flush=True, end='')
+                elif op.operator == 'soa':
+                    self.stdout.write(chr(self.memory[self.dptr]))
+                    self.stdout.flush()
                 elif op.operator == ',':
                     self.memory[self.dptr] = ord(sys.stdin.read(1))
                 elif op.operator == 'dbg':

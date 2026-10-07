@@ -416,3 +416,21 @@ class TestInternalMixin(TestAssembler):
             self.assertEqual(5, self.interpreter.dptr)
 
         self.run_and_check(cases, source, check, init_vm=False)
+
+    def test_soa_imm(self):
+
+        cases = [
+            "Hello, world!"
+        ]
+
+        def source(case):
+            result = "_DBG\n"
+            result += ''.join([f"_ADD {ord(c)}\n_MDP 1\n" for c in case])
+            result += f"_MDP -1\n" * len(case)
+            result += f"_SOA {len(case)}"
+            return result
+
+        def check(case):
+            self.assertStdout(case)
+
+        self.run_and_check(cases, source, check, init_vm=False)

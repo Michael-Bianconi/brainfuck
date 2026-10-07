@@ -13,12 +13,13 @@ from src.assembly.instructions.swap import Swap
 from src.assembly.instructions.load import Load
 from src.assembly.instructions.pops import Pops
 from src.assembly.instructions.plus import Plus
+from src.assembly.instructions.prnt import Prnt
 from src.assembly.instructions.neql import Neql
 from src.assembly.instructions.sifz import Sifz
 from src.assembly.parser import Parser
 
 
-class Assembler(InternalMixin, Bshr, Band, Neql, Sifz, Plus, Pops, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
+class Assembler(InternalMixin, Bshr, Band, Neql, Sifz, Plus, Pops, Prnt, Seti, Load, ArithmeticMixin, ComparisonMixin, ControlMixin, BitwiseMixin, Geti, Push, Subt, Swap):
 
     def __init__(self):
         self.vtable = {}
@@ -41,10 +42,14 @@ class Assembler(InternalMixin, Bshr, Band, Neql, Sifz, Plus, Pops, Seti, Load, A
         self.instructions.update(self.load_definitions())
         self.instructions.update(self.pops_definitions())
         self.instructions.update(self.plus_definitions())
+        self.instructions.update(self.prnt_definitions())
         self.instructions.update(self.neql_definitions())
         self.instructions.update(self.sifz_definitions())
 
     def assemble(self, source):
+        if source is None:
+            raise ValueError("source cannot be None")
+
         parser = Parser()
         result = ""
         for line in source.splitlines():
@@ -56,7 +61,10 @@ class Assembler(InternalMixin, Bshr, Band, Neql, Sifz, Plus, Pops, Seti, Load, A
                 mnemonic = parser.mnemonic()
                 operand_values = tuple([o.operand_value for o in parser.operands()])
                 operand_types = tuple([o.operand_type for o in parser.operands()])
-                instruction = self.instructions[(mnemonic, operand_types)]
+                try:
+                    instruction = self.instructions[(mnemonic, operand_types)]
+                except KeyError as e:
+                    raise RuntimeError(f"m=[{mnemonic}] o=[{operand_types}]", e)
                 exe = instruction(*operand_values)
                 if '_' not in mnemonic:
                     print(f"{self.stack_pointer} {line.strip()} {exe}")
